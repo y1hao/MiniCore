@@ -20,7 +20,7 @@ namespace MiniCore.Framework.DependencyInjection;
 /// </list>
 /// </para>
 /// </remarks>
-public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposable
+public class ServiceProvider : IServiceProvider, System.IServiceProvider, IServiceScopeFactory, IDisposable
 {
     private readonly ServiceCollection _services;
     private readonly ServiceProviderOptions _options;

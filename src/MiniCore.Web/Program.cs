@@ -4,6 +4,13 @@ using MiniCore.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// TODO: REMOVE IN PHASE 4 (Host Abstraction)
+// This bridges ASP.NET Core's Microsoft DI with our custom DI container.
+// In Phase 4, we'll replace WebApplication.CreateBuilder() with our own MiniHostBuilder
+// that uses our DI natively, eliminating the need for this bridge.
+// See: docs/Chapter1/MICROSOFT_DI_DEPENDENCY_ANALYSIS.md
+builder.Host.UseServiceProviderFactory(new MiniCore.Web.ServiceProviderFactory());
+
 // Add services
 // Only register SQLite if not in testing environment (tests will register InMemory)
 if (!builder.Environment.IsEnvironment("Testing"))
