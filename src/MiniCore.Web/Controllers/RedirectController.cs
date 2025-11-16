@@ -13,12 +13,14 @@ public class RedirectController(AppDbContext context, ILogger<RedirectController
     public async Task<IActionResult> RedirectToUrl(string path)
     {
         // Extract shortCode from path (MapFallbackToController with {*path} pattern passes the entire unmatched path)
-        var shortCode = path?.TrimStart('/').Split('/')[0];
+        var pathSegments = path?.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
         
-        if (string.IsNullOrEmpty(shortCode))
+        if (pathSegments == null || pathSegments.Length == 0)
         {
             return NotFound();
         }
+        
+        var shortCode = pathSegments[0];
         
         var link = await _context.ShortLinks
             .FirstOrDefaultAsync(l => l.ShortCode == shortCode);
@@ -35,9 +37,18 @@ public class RedirectController(AppDbContext context, ILogger<RedirectController
             return NotFound();
         }
 
-        _logger.LogInformation("Redirecting {ShortCode} -> {OriginalUrl}", shortCode, link.OriginalUrl);
+        // Preserve additional path segments after the short code
+        var redirectUrl = link.OriginalUrl;
+        if (pathSegments.Length > 1)
+        {
+            var additionalPath = string.Join("/", pathSegments.Skip(1));
+            // Ensure proper URL joining: remove trailing slash from original URL if present, then add the additional path
+            redirectUrl = redirectUrl.TrimEnd('/') + "/" + additionalPath;
+        }
 
-        return Redirect(link.OriginalUrl);
+        _logger.LogInformation("Redirecting {ShortCode} -> {RedirectUrl}", shortCode, redirectUrl);
+
+        return Redirect(redirectUrl);
     }
 }
 
