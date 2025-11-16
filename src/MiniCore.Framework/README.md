@@ -7,8 +7,9 @@ The core framework implementation for MiniCore, progressively replacing Microsof
 ```
 MiniCore.Framework/
 ├── DependencyInjection/   # Dependency Injection (Phase 1)
+│   ├── Abstractions/      # Interfaces (IServiceProvider, IServiceCollection, etc.)
 │   ├── Extensions/        # Extension methods
-│   └── ...
+│   └── ...                # Implementations (ServiceProvider, ServiceCollection, etc.)
 ├── Config/                # Configuration (Phase 2)
 ├── Logging/               # Logging (Phase 3)
 ├── Hosting/               # Host abstraction (Phase 4)
