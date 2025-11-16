@@ -179,53 +179,43 @@ public class ShortLinkControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateLink_WithApiAsShortCode_ReturnsCreatedResult()
+    public async Task CreateLink_WithApiAsShortCode_ReturnsBadRequest()
     {
         // Arrange
-        var configurationSection = new Mock<IConfigurationSection>();
-        configurationSection.Setup(s => s.Value).Returns("30");
-        _mockConfiguration.Setup(c => c.GetSection("LinkCleanup:DefaultExpirationDays"))
-            .Returns(configurationSection.Object);
-        _mockConfiguration.Setup(c => c["LinkCleanup:DefaultExpirationDays"]).Returns("30");
-
         var request = new CreateShortLinkRequest
         {
             OriginalUrl = "https://example.com",
-            ShortCode = "api" // Should be allowed since API routes are under /api/*
+            ShortCode = "api" // Reserved word - should be rejected
         };
 
         // Act
         var result = await _controller.CreateLink(request);
 
         // Assert
-        var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-        var dto = Assert.IsType<ShortLinkDto>(createdResult.Value);
-        Assert.Equal("api", dto.ShortCode);
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.NotNull(badRequestResult.Value);
+        var errorMessage = badRequestResult.Value.ToString();
+        Assert.Contains("reserved", errorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task CreateLink_WithAdminAsShortCode_ReturnsCreatedResult()
+    public async Task CreateLink_WithAdminAsShortCode_ReturnsBadRequest()
     {
         // Arrange
-        var configurationSection = new Mock<IConfigurationSection>();
-        configurationSection.Setup(s => s.Value).Returns("30");
-        _mockConfiguration.Setup(c => c.GetSection("LinkCleanup:DefaultExpirationDays"))
-            .Returns(configurationSection.Object);
-        _mockConfiguration.Setup(c => c["LinkCleanup:DefaultExpirationDays"]).Returns("30");
-
         var request = new CreateShortLinkRequest
         {
             OriginalUrl = "https://example.com",
-            ShortCode = "admin" // Should be allowed since /admin route is explicitly mapped
+            ShortCode = "admin" // Reserved word - should be rejected
         };
 
         // Act
         var result = await _controller.CreateLink(request);
 
         // Assert
-        var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-        var dto = Assert.IsType<ShortLinkDto>(createdResult.Value);
-        Assert.Equal("admin", dto.ShortCode);
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.NotNull(badRequestResult.Value);
+        var errorMessage = badRequestResult.Value.ToString();
+        Assert.Contains("reserved", errorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

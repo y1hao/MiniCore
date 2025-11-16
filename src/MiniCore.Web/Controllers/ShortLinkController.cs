@@ -71,6 +71,13 @@ public class ShortLinkController(AppDbContext context, ILogger<ShortLinkControll
                 return BadRequest(new { error = "Short code can only contain letters, numbers, hyphens, and underscores" });
             }
             
+            // Check for reserved words that conflict with application routes
+            var reservedWords = new[] { "api", "admin" };
+            if (reservedWords.Contains(shortCode, StringComparer.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { error = $"Short code '{shortCode}' is reserved and cannot be used" });
+            }
+            
             // Check for uniqueness
             if (await _context.ShortLinks.AnyAsync(l => l.ShortCode == shortCode))
             {
