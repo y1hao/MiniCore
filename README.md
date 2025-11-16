@@ -53,14 +53,17 @@ Establish a reference ASP.NET Core app for functional parity.
 **Status:** Complete  
 **See:** [Chapter 0 Documentation](docs/Chapter0/README.md)
 
-### Phase 1: Dependency Injection Framework
-Implement a minimal DI container to replace `Microsoft.Extensions.DependencyInjection`.
+### Phase 1: Dependency Injection Framework ✅
+Implemented a minimal DI container to replace `Microsoft.Extensions.DependencyInjection`.
+
+**Status:** ✅ Complete  
+**See:** [Chapter 1 Documentation](docs/Chapter1/README.md)
 
 **Key Features:**
-- `IServiceCollection`, `IServiceProvider`
-- Transient / Singleton / Scoped lifetimes
-- Constructor injection
-- Open-generic support (`ILogger<T>`)
+- ✅ `IServiceCollection`, `IServiceProvider`
+- ✅ Transient / Singleton / Scoped lifetimes
+- ✅ Constructor injection
+- ✅ Open-generic support (`ILogger<T>`)
 
 ### Phase 2: Configuration Framework
 Replace `Microsoft.Extensions.Configuration`.
@@ -145,17 +148,18 @@ MiniCore/
 │   ├── MiniCore.Web.Tests/         # Tests for baseline app
 │   ├── MiniCore.Reference/         # Static reference copy (unchanged)
 │   ├── MiniCore.Reference.Tests/   # Tests for reference app
-│   └── MiniCore.Framework/         # Custom framework (future phases)
-│       ├── DI/
-│       ├── Config/
-│       ├── Logging/
-│       ├── Hosting/
-│       ├── Server/
-│       ├── Routing/
-│       ├── Middleware/
-│       └── Background/
+│   └── MiniCore.Framework/         # Custom framework
+│       ├── DependencyInjection/    # ✅ Phase 1 Complete
+│       ├── Config/                  # Phase 2
+│       ├── Logging/                 # Phase 3
+│       ├── Hosting/                 # Phase 4
+│       ├── Server/                  # Phase 7
+│       ├── Routing/                 # Phase 6
+│       ├── Middleware/              # Phase 5
+│       └── Background/              # Phase 10
 ├── docs/
-│   ├── Chapter0/                   # Phase 0 documentation
+│   ├── Chapter0/                   # Phase 0 documentation ✅
+│   ├── Chapter1/                   # Phase 1 documentation ✅
 │   └── SPEC.md                    # Detailed specification
 └── README.md                      # This file
 ```
@@ -243,16 +247,20 @@ Phase 0 establishes the foundation by creating a fully functional URL shortener 
 
 **Read More:** [Chapter 0 Documentation](docs/Chapter0/README.md)
 
-### [Chapter 1: Dependency Injection Framework](docs/Chapter1/README.md)
+### [Chapter 1: Dependency Injection Framework](docs/Chapter1/README.md) ✅
 
-Phase 1 focuses on implementing a minimal Dependency Injection container to replace `Microsoft.Extensions.DependencyInjection`. This is the foundation that all other framework components will build upon.
+Phase 1 successfully implemented a minimal Dependency Injection container to replace `Microsoft.Extensions.DependencyInjection`. This is the foundation that all other framework components will build upon.
 
-**Key Goals:**
-- ✅ Implement core DI interfaces matching Microsoft's API surface
+**Status:** ✅ Complete
+
+**Key Accomplishments:**
+- ✅ Implemented core DI interfaces matching Microsoft's API surface
 - ✅ Support three service lifetimes: Transient, Scoped, and Singleton
-- ✅ Enable constructor injection with automatic dependency resolution
-- ✅ Support open-generic types (e.g., `ILogger<T>`)
-- ✅ Provide service scope management for scoped lifetime services
+- ✅ Constructor injection with automatic dependency resolution
+- ✅ Open-generic support (e.g., `ILogger<T>`)
+- ✅ Service scope management for scoped lifetime services
+- ✅ Comprehensive test coverage
+- ✅ Integrated into MiniCore.Web application
 
 **Read More:** [Chapter 1 Documentation](docs/Chapter1/README.md)
 
@@ -268,5 +276,5 @@ This is an educational project. Feel free to explore, learn, and adapt the code 
 
 ---
 
-**Status:** Phase 0 Complete ✅ | Next: Phase 1 - Dependency Injection Framework
+**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Next: Phase 2 - Configuration Framework
 
