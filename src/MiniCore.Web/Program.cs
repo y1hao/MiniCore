@@ -30,11 +30,9 @@ var app = builder.Build();
 // Ensure database is created (skip in test environment)
 if (!app.Environment.IsEnvironment("Testing"))
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        context.Database.EnsureCreated();
-    }
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    context.Database.EnsureCreated();
 }
 
 // Configure the HTTP request pipeline
