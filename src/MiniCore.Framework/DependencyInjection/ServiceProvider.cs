@@ -405,7 +405,7 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
         }
         finally
         {
-            // Only remove from stack if we added it (might have been added by a previous call)
+            // Always remove from stack - we added them above, and this ensures cleanup even if an exception occurs
             resolutionStack.Remove(descriptor.ServiceType);
             resolutionStack.Remove(implementationType);
         }
