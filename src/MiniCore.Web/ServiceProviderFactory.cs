@@ -6,8 +6,9 @@
 // - Register services directly into our IServiceCollection without conversion
 // See: docs/Chapter1/MICROSOFT_DI_DEPENDENCY_ANALYSIS.md for details
 
-using Microsoft.Extensions.DependencyInjection;
-using MiniCore.Framework.DependencyInjection;
+using MSDI = Microsoft.Extensions.DependencyInjection;
+using MiniCore.Framework.DependencyInjection; // Required for extension methods
+using MiniDI = MiniCore.Framework.DependencyInjection;
 
 namespace MiniCore.Web;
 
@@ -18,28 +19,20 @@ namespace MiniCore.Web;
 /// NOTE: This is temporary bridge code that will be removed in Phase 4 (Host Abstraction)
 /// when we implement our own HostBuilder that uses our DI natively.
 /// </summary>
-public class ServiceProviderFactory : IServiceProviderFactory<MiniCore.Framework.DependencyInjection.ServiceCollection>
+/// <param name="options">Optional service provider options.</param>
+public class ServiceProviderFactory(MiniDI.ServiceProviderOptions? options = null) : MSDI.IServiceProviderFactory<MiniDI.ServiceCollection>
 {
-    private readonly MiniCore.Framework.DependencyInjection.ServiceProviderOptions _options;
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="ServiceProviderFactory"/>.
-    /// </summary>
-    /// <param name="options">Optional service provider options.</param>
-    public ServiceProviderFactory(MiniCore.Framework.DependencyInjection.ServiceProviderOptions? options = null)
-    {
-        _options = options ?? new MiniCore.Framework.DependencyInjection.ServiceProviderOptions();
-    }
+    private readonly MiniDI.ServiceProviderOptions _options = options ?? new MiniDI.ServiceProviderOptions();
 
     /// <summary>
     /// Creates a builder from the Microsoft service collection.
     /// </summary>
     /// <param name="services">The Microsoft service collection.</param>
     /// <returns>A builder that wraps the service collection.</returns>
-    public MiniCore.Framework.DependencyInjection.ServiceCollection CreateBuilder(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    public MiniDI.ServiceCollection CreateBuilder(MSDI.IServiceCollection services)
     {
         // Convert Microsoft's IServiceCollection to our ServiceCollection
-        var ourCollection = new MiniCore.Framework.DependencyInjection.ServiceCollection();
+        var ourCollection = new MiniDI.ServiceCollection();
         
         foreach (var descriptor in services)
         {
@@ -56,7 +49,7 @@ public class ServiceProviderFactory : IServiceProviderFactory<MiniCore.Framework
     /// </summary>
     /// <param name="containerBuilder">Our service collection.</param>
     /// <returns>A service provider that implements System.IServiceProvider.</returns>
-    public System.IServiceProvider CreateServiceProvider(MiniCore.Framework.DependencyInjection.ServiceCollection containerBuilder)
+    public System.IServiceProvider CreateServiceProvider(MiniDI.ServiceCollection containerBuilder)
     {
         var provider = containerBuilder.BuildServiceProvider(_options);
         // Our ServiceProvider already implements System.IServiceProvider, so we can return it directly
@@ -67,20 +60,20 @@ public class ServiceProviderFactory : IServiceProviderFactory<MiniCore.Framework
     /// <summary>
     /// Converts a Microsoft ServiceDescriptor to our ServiceDescriptor.
     /// </summary>
-    private static MiniCore.Framework.DependencyInjection.ServiceDescriptor ConvertDescriptor(Microsoft.Extensions.DependencyInjection.ServiceDescriptor msDescriptor)
+    private static MiniDI.ServiceDescriptor ConvertDescriptor(MSDI.ServiceDescriptor msDescriptor)
     {
         var lifetime = msDescriptor.Lifetime switch
         {
-            Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton => MiniCore.Framework.DependencyInjection.ServiceLifetime.Singleton,
-            Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped => MiniCore.Framework.DependencyInjection.ServiceLifetime.Scoped,
-            Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient => MiniCore.Framework.DependencyInjection.ServiceLifetime.Transient,
+            MSDI.ServiceLifetime.Singleton => MiniDI.ServiceLifetime.Singleton,
+            MSDI.ServiceLifetime.Scoped => MiniDI.ServiceLifetime.Scoped,
+            MSDI.ServiceLifetime.Transient => MiniDI.ServiceLifetime.Transient,
             _ => throw new ArgumentException($"Unknown lifetime: {msDescriptor.Lifetime}")
         };
 
         // Handle different descriptor types
         if (msDescriptor.ImplementationInstance != null)
         {
-            return MiniCore.Framework.DependencyInjection.ServiceDescriptor.Describe(
+            return MiniDI.ServiceDescriptor.Describe(
                 msDescriptor.ServiceType,
                 msDescriptor.ImplementationInstance,
                 lifetime);
@@ -90,15 +83,15 @@ public class ServiceProviderFactory : IServiceProviderFactory<MiniCore.Framework
         {
             // Wrap Microsoft's factory to work with our ServiceProvider
             // The factory expects System.IServiceProvider, so we need to wrap our IServiceProvider
-            return MiniCore.Framework.DependencyInjection.ServiceDescriptor.Describe(
+            return MiniDI.ServiceDescriptor.Describe(
                 msDescriptor.ServiceType,
-                sp => msDescriptor.ImplementationFactory!(new ServiceProviderAdapter((MiniCore.Framework.DependencyInjection.ServiceProvider)sp)),
+                sp => msDescriptor.ImplementationFactory!(new ServiceProviderAdapter((MiniDI.ServiceProvider)sp)),
                 lifetime);
         }
         
         if (msDescriptor.ImplementationType != null)
         {
-            return MiniCore.Framework.DependencyInjection.ServiceDescriptor.Describe(
+            return MiniDI.ServiceDescriptor.Describe(
                 msDescriptor.ServiceType,
                 msDescriptor.ImplementationType,
                 lifetime);
@@ -112,11 +105,11 @@ public class ServiceProviderFactory : IServiceProviderFactory<MiniCore.Framework
 /// Adapter that wraps our ServiceProvider to implement System.IServiceProvider
 /// and Microsoft.Extensions.DependencyInjection.IServiceScopeFactory.
 /// </summary>
-internal class ServiceProviderAdapter : System.IServiceProvider, Microsoft.Extensions.DependencyInjection.IServiceScopeFactory, IDisposable
+internal class ServiceProviderAdapter : System.IServiceProvider, MSDI.IServiceScopeFactory, IDisposable
 {
-    private readonly MiniCore.Framework.DependencyInjection.ServiceProvider _provider;
+    private readonly MiniDI.ServiceProvider _provider;
 
-    public ServiceProviderAdapter(MiniCore.Framework.DependencyInjection.ServiceProvider provider)
+    public ServiceProviderAdapter(MiniDI.ServiceProvider provider)
     {
         _provider = provider;
     }
@@ -126,7 +119,7 @@ internal class ServiceProviderAdapter : System.IServiceProvider, Microsoft.Exten
         return _provider.GetService(serviceType);
     }
 
-    public Microsoft.Extensions.DependencyInjection.IServiceScope CreateScope()
+    public MSDI.IServiceScope CreateScope()
     {
         var scope = _provider.CreateScope();
         return new ServiceScopeAdapter(scope);
@@ -141,16 +134,16 @@ internal class ServiceProviderAdapter : System.IServiceProvider, Microsoft.Exten
 /// <summary>
 /// Adapter that wraps our IServiceScope to implement Microsoft's IServiceScope.
 /// </summary>
-internal class ServiceScopeAdapter : Microsoft.Extensions.DependencyInjection.IServiceScope
+internal class ServiceScopeAdapter : MSDI.IServiceScope
 {
-    private readonly MiniCore.Framework.DependencyInjection.IServiceScope _scope;
+    private readonly MiniDI.IServiceScope _scope;
 
-    public ServiceScopeAdapter(MiniCore.Framework.DependencyInjection.IServiceScope scope)
+    public ServiceScopeAdapter(MiniDI.IServiceScope scope)
     {
         _scope = scope;
     }
 
-    public System.IServiceProvider ServiceProvider => new ServiceProviderAdapter((MiniCore.Framework.DependencyInjection.ServiceProvider)_scope.ServiceProvider);
+    public System.IServiceProvider ServiceProvider => new ServiceProviderAdapter((MiniDI.ServiceProvider)_scope.ServiceProvider);
 
     public void Dispose()
     {
