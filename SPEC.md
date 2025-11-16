@@ -175,10 +175,14 @@ Having it early ensures realistic lifecycle management.
 * `RequestDelegate` delegate (`Task Invoke(HttpContext ctx)`)
 * `app.Use(next => ctx => {...})` pattern
 * Order-preserving execution
-* Built-in middlewares: ExceptionHandler, Logging, Routing
+* Built-in middlewares:
+  * Exception handling middleware (catches and handles unhandled exceptions)
+  * Static file serving middleware (serves files from `wwwroot` directory)
+  * Logging middleware (request/response logging)
+  * Routing middleware (integration with routing framework)
 
 **Reasoning:**
-Middleware is the heart of the ASP.NET Core runtime model. It provides extensibility and composition semantics for all request handling.
+Middleware is the heart of the ASP.NET Core runtime model. It provides extensibility and composition semantics for all request handling. Exception handling and static file serving are essential built-in middlewares that demonstrate core middleware patterns.
 
 ---
 
@@ -269,23 +273,6 @@ Razor’s Roslyn integration is complex; a lightweight static template system de
 **Reasoning:**
 Completes the realism of the Host model — enabling recurring jobs, maintenance tasks, or message consumers.
 In this project, it supports a **real, useful feature** of the baseline app: automatically removing expired short links.
-
----
-
-### **Phase 11 — Cross-Cutting Concerns**
-
-**Goal:** Add final polish and utility features.
-
-**Key Features**
-
-* Logging middleware
-* Static file serving
-* Error handling and graceful shutdown
-* Config binding helpers
-* Simple dependency graph diagnostics
-
-**Reasoning:**
-These make the framework usable end-to-end and demonstrate how cross-cutting concerns interact via DI + Middleware.
 
 ---
 
