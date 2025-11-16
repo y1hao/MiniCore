@@ -44,7 +44,7 @@ public class LinkCleanupService : BackgroundService
         _logger.LogInformation("LinkCleanupService stopped");
     }
 
-    private async Task CleanupExpiredLinks(CancellationToken cancellationToken)
+    public async Task CleanupExpiredLinks(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();

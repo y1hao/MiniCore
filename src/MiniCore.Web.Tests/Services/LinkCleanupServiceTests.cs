@@ -64,19 +64,9 @@ public class LinkCleanupServiceTests : IDisposable
         _context.ShortLinks.AddRange(expiredLink, activeLink);
         await _context.SaveChangesAsync();
 
-        // Act - Use reflection to call the private method, or test via public method
-        // Since CleanupExpiredLinks is private, we'll test indirectly through ExecuteAsync
-        // For unit testing, we'll create a testable version or use reflection
+        // Act
         var cancellationTokenSource = new CancellationTokenSource();
-        cancellationTokenSource.CancelAfter(100); // Cancel after 100ms
-
-        // Start the service and let it run briefly
-        var task = _service.StartAsync(cancellationTokenSource.Token);
-        await Task.Delay(50); // Wait a bit
-        await _service.StopAsync(cancellationTokenSource.Token);
-
-        // Manually trigger cleanup for testing
-        await CleanupExpiredLinksDirectly();
+        await _service.CleanupExpiredLinks(cancellationTokenSource.Token);
 
         // Assert
         Assert.False(await _context.ShortLinks.AnyAsync(l => l.Id == expiredLink.Id));
@@ -101,25 +91,13 @@ public class LinkCleanupServiceTests : IDisposable
         var initialCount = await _context.ShortLinks.CountAsync();
 
         // Act
-        await CleanupExpiredLinksDirectly();
+        var cancellationTokenSource = new CancellationTokenSource();
+        await _service.CleanupExpiredLinks(cancellationTokenSource.Token);
 
         // Assert
         var finalCount = await _context.ShortLinks.CountAsync();
         Assert.Equal(initialCount, finalCount);
         Assert.True(await _context.ShortLinks.AnyAsync(l => l.Id == activeLink.Id));
-    }
-
-    private async Task CleanupExpiredLinksDirectly()
-    {
-        var expiredLinks = await _context.ShortLinks
-            .Where(l => l.ExpiresAt.HasValue && l.ExpiresAt.Value < DateTime.UtcNow)
-            .ToListAsync();
-
-        if (expiredLinks.Count > 0)
-        {
-            _context.ShortLinks.RemoveRange(expiredLinks);
-            await _context.SaveChangesAsync();
-        }
     }
 
     protected virtual void Dispose(bool disposing)
