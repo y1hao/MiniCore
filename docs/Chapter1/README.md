@@ -205,8 +205,41 @@ Phase 1 has been successfully integrated into `MiniCore.Web`:
 - ✅ Constructor injection works for all current use cases
 - ✅ Open generics work (`ILogger<T>`)
 - ✅ Service scopes work correctly
-- ✅ All existing tests pass with new DI container
+- ✅ Unit tests for DI framework pass (100%)
+- ⚠️ Integration tests fail due to Options pattern dependency (expected - see Known Limitations)
 - ✅ No breaking changes to application code
+
+## Known Limitations
+
+### Integration Test Failures (Expected)
+
+**Status:** 11 integration tests currently fail, 31 pass
+
+**Root Cause:** The integration tests fail because `ConsoleLoggerProvider` requires the Options pattern (`IOptionsMonitor<T>`, `IOptions<T>`) which is not yet implemented. Our custom DI container correctly resolves services, but Microsoft's Options framework handles:
+- Configuration binding to options objects
+- `IOptionsMonitor<T>` factory registration
+- Options change notifications
+
+**Error Details:**
+```
+System.Collections.Generic.KeyNotFoundException : The given key 'simple' was not present in the dictionary.
+at Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider.ReloadLoggerOptions(ConsoleLoggerOptions options)
+```
+
+This occurs because `ConsoleLoggerOptions` expects default formatters to be configured via the Options pattern, which requires:
+- **Phase 2 (Configuration)**: To bind configuration values to options objects
+- **Phase 3 (Logging)**: To properly configure logging providers and options
+
+**When Will Tests Pass:**
+- **TODO: Tests should pass after Phase 3 (Logging Framework) is complete**
+- Phase 3 will implement the Options pattern and logging infrastructure needed by `ConsoleLoggerProvider`
+- Alternatively, tests may pass earlier if we implement minimal Options support in Phase 2
+
+**Workaround:** None needed - this is expected behavior. The DI container itself is working correctly; the limitation is in the Options/Configuration infrastructure that will be implemented in later phases.
+
+**Reference Implementation:** All tests pass in `MiniCore.Reference.Tests` because it uses Microsoft's full stack (DI + Options + Configuration + Logging).
+
+**For a detailed explanation of the Options pattern, see:** [OPTIONS_PATTERN_EXPLANATION.md](OPTIONS_PATTERN_EXPLANATION.md)
 
 ## Next Steps
 

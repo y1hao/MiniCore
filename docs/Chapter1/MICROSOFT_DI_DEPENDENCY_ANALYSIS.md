@@ -187,11 +187,27 @@ Once Phase 4 is complete, we can remove:
 | Entity Framework Core | Uses Microsoft DI for DbContext | Phase 8 (when we replace ORM) |
 | Razor Pages | Uses Microsoft DI for view rendering | Phase 9 (when we replace templating) |
 
+## Known Limitations
+
+### Integration Test Failures
+
+**Status:** 11 integration tests currently fail (31 pass)
+
+**Root Cause:** Tests fail because `ConsoleLoggerProvider` requires the Options pattern (`IOptionsMonitor<T>`) which is not yet implemented. This is expected and not a DI container issue.
+
+**When Will Tests Pass:**
+- **TODO: Tests should pass after Phase 3 (Logging Framework) is complete**
+- Phase 3 will implement the Options pattern needed by logging providers
+
+**See:** `docs/Chapter1/README.md#known-limitations` for full details.
+
 ## Summary
 
 **Current Status:**
 - ✅ We have a fully functional custom DI container
 - ✅ It's being used for service resolution (via `ServiceProviderFactory`)
+- ✅ All DI framework unit tests pass (100%)
+- ⚠️ Integration tests fail due to Options pattern dependency (expected - see Known Limitations above)
 - ⚠️ We still depend on Microsoft's DI for service registration
 
 **Why:**

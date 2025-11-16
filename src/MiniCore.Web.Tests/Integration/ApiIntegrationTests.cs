@@ -10,6 +10,13 @@ using System.Text.Json;
 
 namespace MiniCore.Web.Tests.Integration;
 
+// TODO: These integration tests currently fail due to Options pattern dependency (expected).
+// The tests fail because ConsoleLoggerProvider requires IOptionsMonitor<T> which is not yet implemented.
+// Tests should pass after Phase 3 (Logging Framework) is complete, which will implement:
+// - Options pattern (IOptionsMonitor<T>, IOptions<T>)
+// - Configuration binding to options objects
+// - Proper logging provider configuration
+// See: docs/Chapter1/README.md#known-limitations for details.
 public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;

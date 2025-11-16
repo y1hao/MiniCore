@@ -83,6 +83,10 @@ public class ServiceProviderFactory(MiniDI.ServiceProviderOptions? options = nul
         {
             // Wrap Microsoft's factory to work with our ServiceProvider
             // The factory expects System.IServiceProvider, so we need to wrap our IServiceProvider
+            // 
+            // TODO: REMOVE IN PHASE 4 (Host Abstraction)
+            // When we implement our own HostBuilder in Phase 4, we'll register services directly
+            // into our IServiceCollection without conversion, eliminating the need for this adapter.
             return MiniDI.ServiceDescriptor.Describe(
                 msDescriptor.ServiceType,
                 sp => msDescriptor.ImplementationFactory!(new ServiceProviderAdapter((MiniDI.ServiceProvider)sp)),
@@ -104,6 +108,12 @@ public class ServiceProviderFactory(MiniDI.ServiceProviderOptions? options = nul
 /// <summary>
 /// Adapter that wraps our ServiceProvider to implement System.IServiceProvider
 /// and Microsoft.Extensions.DependencyInjection.IServiceScopeFactory.
+/// 
+/// TODO: REMOVE IN PHASE 4 (Host Abstraction)
+/// This adapter bridges our custom DI container with ASP.NET Core's expected interfaces.
+/// When we implement our own HostBuilder in Phase 4, we'll register services directly
+/// into our IServiceCollection without conversion, eliminating the need for this adapter.
+/// See: docs/Chapter1/MICROSOFT_DI_DEPENDENCY_ANALYSIS.md for details.
 /// </summary>
 internal class ServiceProviderAdapter : System.IServiceProvider, MSDI.IServiceScopeFactory, IDisposable
 {
@@ -133,6 +143,12 @@ internal class ServiceProviderAdapter : System.IServiceProvider, MSDI.IServiceSc
 
 /// <summary>
 /// Adapter that wraps our IServiceScope to implement Microsoft's IServiceScope.
+/// 
+/// TODO: REMOVE IN PHASE 4 (Host Abstraction)
+/// This adapter bridges our custom IServiceScope with ASP.NET Core's expected interface.
+/// When we implement our own HostBuilder in Phase 4, we'll register services directly
+/// into our IServiceCollection without conversion, eliminating the need for this adapter.
+/// See: docs/Chapter1/MICROSOFT_DI_DEPENDENCY_ANALYSIS.md for details.
 /// </summary>
 internal class ServiceScopeAdapter : MSDI.IServiceScope
 {

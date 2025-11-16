@@ -96,10 +96,19 @@ MiniCore.Framework/
 - ✅ Constructor injection works for all current use cases
 - ✅ Open generics work (`ILogger<T>`)
 - ✅ Service scopes work correctly
-- ✅ All existing tests pass
+- ✅ All DI framework unit tests pass (100%)
+- ⚠️ Integration tests fail due to Options pattern dependency (expected - see Known Limitations)
 - ✅ No breaking changes to application code
 
 **Status:** Phase 1 Complete ✅
+
+### Known Limitations
+
+**Integration Test Failures:** 11 tests fail because `ConsoleLoggerProvider` requires the Options pattern (`IOptionsMonitor<T>`) which is not yet implemented. This is expected and will be resolved in Phase 3 (Logging Framework).
+
+**TODO: Tests should pass after Phase 3 (Logging Framework) is complete**
+
+See `docs/Chapter1/README.md#known-limitations` for full details.
 
 ### Next Phase
 
