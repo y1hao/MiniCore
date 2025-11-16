@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 
 namespace MiniCore.Framework.DependencyInjection;
 
@@ -13,19 +14,19 @@ namespace MiniCore.Framework.DependencyInjection;
 /// This service provider resolves services by:
 /// <list type="number">
 /// <item>Looking up the service registration in the service collection</item>
-/// <item>Resolving dependencies recursively</item>
+/// <item>Checking lifetime caches (Singleton, Scoped)</item>
+/// <item>Resolving dependencies recursively with circular dependency detection</item>
 /// <item>Creating instances using constructor injection</item>
 /// </list>
-/// </para>
-/// <para>
-/// This initial implementation does not yet support service lifetimes (Singleton, Scoped, Transient).
-/// All services are created fresh on each resolution.
 /// </para>
 /// </remarks>
 public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposable
 {
     private readonly ServiceCollection _services;
     private readonly ServiceProviderOptions _options;
+    private readonly Dictionary<Type, object> _singletons;
+    private readonly object _singletonLock = new object();
+    private readonly ThreadLocal<HashSet<Type>> _resolutionStack = new ThreadLocal<HashSet<Type>>(() => new HashSet<Type>());
     private bool _disposed;
 
     /// <summary>
@@ -39,8 +40,12 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
         ArgumentNullException.ThrowIfNull(services);
         _services = services;
         _options = options ?? new ServiceProviderOptions();
+        _singletons = new Dictionary<Type, object>();
 
-        // TODO: Implement ValidateOnBuild when lifetimes are added
+        if (_options.ValidateOnBuild)
+        {
+            ValidateOnBuild();
+        }
     }
 
     /// <summary>
@@ -56,6 +61,14 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
         ThrowIfDisposed();
         ArgumentNullException.ThrowIfNull(serviceType);
 
+        return GetService(serviceType, null);
+    }
+
+    /// <summary>
+    /// Internal method to get service with optional scoped cache for scoped lifetime services.
+    /// </summary>
+    internal object? GetService(Type serviceType, Dictionary<Type, object>? scopedInstances)
+    {
         // Find service descriptor
         var descriptor = FindServiceDescriptor(serviceType);
         if (descriptor == null)
@@ -63,7 +76,7 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
             return null;
         }
 
-        return ResolveService(descriptor, serviceType);
+        return ResolveService(descriptor, serviceType, scopedInstances);
     }
 
     /// <summary>
@@ -73,7 +86,7 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
     public IServiceScope CreateScope()
     {
         ThrowIfDisposed();
-        return new ServiceScope(this);
+        return new ServiceScope(this, new Dictionary<Type, object>());
     }
 
     /// <summary>
@@ -83,7 +96,17 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
     {
         if (!_disposed)
         {
-            // TODO: Dispose singleton instances when lifetimes are implemented
+            lock (_singletonLock)
+            {
+                foreach (var singleton in _singletons.Values)
+                {
+                    if (singleton is IDisposable disposable)
+                    {
+                        disposable.Dispose();
+                    }
+                }
+                _singletons.Clear();
+            }
             _disposed = true;
         }
     }
@@ -108,12 +131,91 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
     }
 
     /// <summary>
-    /// Resolves a service from a descriptor.
+    /// Resolves a service from a descriptor with lifetime management.
     /// </summary>
     /// <param name="descriptor">The service descriptor.</param>
     /// <param name="serviceType">The service type being requested.</param>
+    /// <param name="scopedInstances">Optional scoped instances cache.</param>
     /// <returns>The resolved service instance.</returns>
-    private object ResolveService(ServiceDescriptor descriptor, Type serviceType)
+    private object ResolveService(ServiceDescriptor descriptor, Type serviceType, Dictionary<Type, object>? scopedInstances)
+    {
+        // Handle different lifetimes
+        switch (descriptor.Lifetime)
+        {
+            case ServiceLifetime.Singleton:
+                return ResolveSingleton(descriptor, serviceType);
+
+            case ServiceLifetime.Scoped:
+                if (scopedInstances == null)
+                {
+                    if (_options.ValidateScopes)
+                    {
+                        throw new InvalidOperationException(
+                            $"Cannot resolve scoped service '{serviceType}' from root service provider.");
+                    }
+                    // Fall back to creating a new instance if scope validation is disabled
+                    return CreateServiceInstance(descriptor, serviceType, scopedInstances);
+                }
+                return ResolveScoped(descriptor, serviceType, scopedInstances);
+
+            case ServiceLifetime.Transient:
+                return CreateServiceInstance(descriptor, serviceType, scopedInstances);
+
+            default:
+                throw new InvalidOperationException(
+                    $"Unknown service lifetime: {descriptor.Lifetime}");
+        }
+    }
+
+    /// <summary>
+    /// Resolves a singleton service, creating it if necessary.
+    /// </summary>
+    private object ResolveSingleton(ServiceDescriptor descriptor, Type serviceType)
+    {
+        // Check cache first
+        lock (_singletonLock)
+        {
+            if (_singletons.TryGetValue(serviceType, out var cached))
+            {
+                return cached;
+            }
+        }
+
+        // Create instance (double-check locking pattern)
+        lock (_singletonLock)
+        {
+            if (_singletons.TryGetValue(serviceType, out var cached))
+            {
+                return cached;
+            }
+
+            var instance = CreateServiceInstance(descriptor, serviceType, null);
+            _singletons[serviceType] = instance;
+            return instance;
+        }
+    }
+
+    /// <summary>
+    /// Resolves a scoped service, creating it if necessary.
+    /// </summary>
+    private object ResolveScoped(ServiceDescriptor descriptor, Type serviceType, Dictionary<Type, object> scopedInstances)
+    {
+        // Check scoped cache first
+        if (scopedInstances.TryGetValue(serviceType, out var cached))
+        {
+            return cached;
+        }
+
+        // Create instance and cache it
+        var instance = CreateServiceInstance(descriptor, serviceType, scopedInstances);
+        scopedInstances[serviceType] = instance;
+        return instance;
+    }
+
+    /// <summary>
+    /// Creates a service instance from a descriptor.
+    /// </summary>
+    private object CreateServiceInstance(ServiceDescriptor descriptor, Type serviceType, Dictionary<Type, object>? scopedInstances)
     {
         // If instance is provided, return it
         if (descriptor.ImplementationInstance != null)
@@ -124,13 +226,19 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
         // If factory is provided, call it
         if (descriptor.ImplementationFactory != null)
         {
-            return descriptor.ImplementationFactory(this);
+            // Use scoped provider if we have scoped instances, otherwise use this provider
+            IServiceProvider provider = this;
+            if (scopedInstances != null)
+            {
+                provider = new ScopedServiceProviderWrapper(this, scopedInstances);
+            }
+            return descriptor.ImplementationFactory(provider);
         }
 
         // If implementation type is provided, create instance via constructor injection
         if (descriptor.ImplementationType != null)
         {
-            return CreateInstance(descriptor.ImplementationType);
+            return CreateInstance(descriptor.ImplementationType, scopedInstances, descriptor);
         }
 
         throw new InvalidOperationException(
@@ -138,46 +246,99 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
     }
 
     /// <summary>
-    /// Creates an instance of the specified type using constructor injection.
+    /// Creates an instance of the specified type using constructor injection with circular dependency detection.
     /// </summary>
     /// <param name="implementationType">The type to create an instance of.</param>
+    /// <param name="scopedInstances">Optional scoped instances cache.</param>
+    /// <param name="descriptor">The service descriptor (for lifetime checking).</param>
     /// <returns>The created instance.</returns>
-    private object CreateInstance(Type implementationType)
+    private object CreateInstance(Type implementationType, Dictionary<Type, object>? scopedInstances, ServiceDescriptor descriptor)
     {
-        var constructors = implementationType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+        var resolutionStack = _resolutionStack.Value!;
+        return CreateInstance(implementationType, scopedInstances, resolutionStack, descriptor);
+    }
 
-        if (constructors.Length == 0)
+    /// <summary>
+    /// Creates an instance with circular dependency detection.
+    /// </summary>
+    private object CreateInstance(Type implementationType, Dictionary<Type, object>? scopedInstances, HashSet<Type> resolutionStack, ServiceDescriptor descriptor)
+    {
+        // For singletons, check cache before adding to resolution stack
+        if (descriptor.Lifetime == ServiceLifetime.Singleton)
         {
-            throw new InvalidOperationException(
-                $"No public constructors found for type '{implementationType}'.");
+            lock (_singletonLock)
+            {
+                if (_singletons.TryGetValue(descriptor.ServiceType, out var cached))
+                {
+                    return cached;
+                }
+            }
+        }
+        else if (scopedInstances != null && descriptor.Lifetime == ServiceLifetime.Scoped)
+        {
+            // For scoped, check scoped cache
+            if (scopedInstances.TryGetValue(descriptor.ServiceType, out var cached))
+            {
+                return cached;
+            }
         }
 
-        // Find the best constructor (one with most resolvable parameters)
-        var bestConstructor = FindBestConstructor(constructors);
-        if (bestConstructor == null)
+        // Check for circular dependency in resolution stack (check both service type and implementation type)
+        if (resolutionStack.Contains(descriptor.ServiceType) || resolutionStack.Contains(implementationType))
         {
+            var stackTrace = string.Join(" -> ", resolutionStack.Select(t => t.Name)) + " -> " + implementationType.Name;
             throw new InvalidOperationException(
-                $"No resolvable constructor found for type '{implementationType}'.");
+                $"Circular dependency detected: {stackTrace}");
         }
 
-        // Resolve constructor parameters
-        var parameters = bestConstructor.GetParameters();
-        var arguments = new object[parameters.Length];
-
-        for (int i = 0; i < parameters.Length; i++)
+        // Add both service type and implementation type to resolution stack
+        resolutionStack.Add(descriptor.ServiceType);
+        resolutionStack.Add(implementationType);
+        try
         {
-            var parameter = parameters[i];
-            var resolved = GetService(parameter.ParameterType);
-            if (resolved == null)
+            var constructors = implementationType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+
+            if (constructors.Length == 0)
             {
                 throw new InvalidOperationException(
-                    $"Unable to resolve service for type '{parameter.ParameterType}' required by constructor parameter '{parameter.Name}' of type '{implementationType}'.");
+                    $"No public constructors found for type '{implementationType}'.");
             }
-            arguments[i] = resolved;
-        }
 
-        // Create instance
-        return bestConstructor.Invoke(arguments);
+            // Find the best constructor (one with most resolvable parameters)
+            var bestConstructor = FindBestConstructor(constructors);
+            if (bestConstructor == null)
+            {
+                throw new InvalidOperationException(
+                    $"No resolvable constructor found for type '{implementationType}'.");
+            }
+
+            // Resolve constructor parameters
+            var parameters = bestConstructor.GetParameters();
+            var arguments = new object[parameters.Length];
+
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                var parameter = parameters[i];
+                // Find descriptor for parameter to pass to CreateInstance for lifetime checking
+                var paramDescriptor = FindServiceDescriptor(parameter.ParameterType);
+                var resolved = GetService(parameter.ParameterType, scopedInstances);
+                if (resolved == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Unable to resolve service for type '{parameter.ParameterType}' required by constructor parameter '{parameter.Name}' of type '{implementationType}'.");
+                }
+                arguments[i] = resolved;
+            }
+
+            // Create instance
+            return bestConstructor.Invoke(arguments);
+        }
+        finally
+        {
+            // Only remove from stack if we added it (might have been added by a previous call)
+            resolutionStack.Remove(descriptor.ServiceType);
+            resolutionStack.Remove(implementationType);
+        }
     }
 
     /// <summary>
@@ -229,6 +390,27 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
     }
 
     /// <summary>
+    /// Validates that all registered services can be resolved during build.
+    /// </summary>
+    private void ValidateOnBuild()
+    {
+        foreach (var descriptor in _services)
+        {
+            try
+            {
+                // Try to resolve the service
+                GetService(descriptor.ServiceType);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to resolve service for type '{descriptor.ServiceType}' during validation. {ex.Message}",
+                    ex);
+            }
+        }
+    }
+
+    /// <summary>
     /// Throws <see cref="ObjectDisposedException"/> if the service provider has been disposed.
     /// </summary>
     private void ThrowIfDisposed()
@@ -236,6 +418,26 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
         if (_disposed)
         {
             throw new ObjectDisposedException(nameof(ServiceProvider));
+        }
+    }
+
+    /// <summary>
+    /// Internal wrapper that provides scoped service resolution for factory calls.
+    /// </summary>
+    private sealed class ScopedServiceProviderWrapper : IServiceProvider
+    {
+        private readonly ServiceProvider _rootProvider;
+        private readonly Dictionary<Type, object> _scopedInstances;
+
+        public ScopedServiceProviderWrapper(ServiceProvider rootProvider, Dictionary<Type, object> scopedInstances)
+        {
+            _rootProvider = rootProvider;
+            _scopedInstances = scopedInstances;
+        }
+
+        public object? GetService(Type serviceType)
+        {
+            return _rootProvider.GetService(serviceType, _scopedInstances);
         }
     }
 }
