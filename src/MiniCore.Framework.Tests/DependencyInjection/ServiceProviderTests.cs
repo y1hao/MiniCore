@@ -292,5 +292,240 @@ public class ServiceProviderTests
             // IDependency not registered
         }
     }
+
+    public class ServiceWithEnumerableDependency : IService
+    {
+        public IEnumerable<IDependency> Dependencies { get; }
+
+        public ServiceWithEnumerableDependency(IEnumerable<IDependency> dependencies)
+        {
+            Dependencies = dependencies;
+        }
+    }
+
+    public class ServiceWithOptionalParameter : IService
+    {
+        public string? OptionalValue { get; }
+
+        public ServiceWithOptionalParameter(string? optionalValue = null)
+        {
+            OptionalValue = optionalValue;
+        }
+    }
+
+    public class ServiceWithOptionalAndRequiredParameters : IService
+    {
+        public IDependency Required { get; }
+        public string? Optional { get; }
+
+        public ServiceWithOptionalAndRequiredParameters(IDependency required, string? optional = "default")
+        {
+            Required = required;
+            Optional = optional;
+        }
+    }
+
+    [Fact]
+    public void GetService_IEnumerable_WhenNoServicesRegistered_ReturnsEmptyCollection()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = provider.GetService(typeof(IEnumerable<IService>));
+
+        // Assert
+        Assert.NotNull(result);
+        var enumerable = Assert.IsAssignableFrom<IEnumerable<IService>>(result);
+        Assert.Empty(enumerable);
+    }
+
+    [Fact]
+    public void GetService_IEnumerable_WhenOneServiceRegistered_ReturnsCollectionWithOneItem()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IService, Service>();
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = provider.GetService(typeof(IEnumerable<IService>));
+
+        // Assert
+        Assert.NotNull(result);
+        var enumerable = Assert.IsAssignableFrom<IEnumerable<IService>>(result);
+        var items = enumerable.ToList();
+        Assert.Single(items);
+        Assert.IsType<Service>(items[0]);
+    }
+
+    [Fact]
+    public void GetService_IEnumerable_WhenMultipleServicesRegistered_ReturnsAllServices()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IService, Service>();
+        services.AddSingleton<IService, ServiceWithDependency>();
+        services.AddSingleton<IDependency, Dependency>();
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = provider.GetService(typeof(IEnumerable<IService>));
+
+        // Assert
+        Assert.NotNull(result);
+        var enumerable = Assert.IsAssignableFrom<IEnumerable<IService>>(result);
+        var items = enumerable.ToList();
+        Assert.Equal(2, items.Count);
+    }
+
+    [Fact]
+    public void GetService_IEnumerable_WithDifferentLifetimes_ReturnsAllServices()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IService, Service>();
+        services.AddTransient<IService, ServiceWithDependency>();
+        services.AddSingleton<IDependency, Dependency>();
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = provider.GetService(typeof(IEnumerable<IService>));
+
+        // Assert
+        Assert.NotNull(result);
+        var enumerable = Assert.IsAssignableFrom<IEnumerable<IService>>(result);
+        var items = enumerable.ToList();
+        Assert.Equal(2, items.Count);
+    }
+
+    [Fact]
+    public void ConstructorInjection_WithIEnumerableParameter_WhenNoServicesRegistered_UsesEmptyCollection()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IService, ServiceWithEnumerableDependency>();
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = provider.GetService(typeof(IService)) as ServiceWithEnumerableDependency;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Dependencies);
+        Assert.Empty(result.Dependencies);
+    }
+
+    [Fact]
+    public void ConstructorInjection_WithIEnumerableParameter_WhenServicesRegistered_UsesRegisteredServices()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IDependency, Dependency>();
+        services.AddSingleton<IService, ServiceWithEnumerableDependency>();
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = provider.GetService(typeof(IService)) as ServiceWithEnumerableDependency;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Dependencies);
+        var items = result.Dependencies.ToList();
+        Assert.Single(items);
+        Assert.IsType<Dependency>(items[0]);
+    }
+
+    [Fact]
+    public void ConstructorInjection_WithIEnumerableParameter_WhenMultipleServicesRegistered_UsesAllServices()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IDependency, Dependency>();
+        // Register another implementation of IDependency
+        services.AddSingleton<IDependency>(sp => new Dependency());
+        services.AddSingleton<IService, ServiceWithEnumerableDependency>();
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = provider.GetService(typeof(IService)) as ServiceWithEnumerableDependency;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Dependencies);
+        var items = result.Dependencies.ToList();
+        Assert.Equal(2, items.Count);
+    }
+
+    [Fact]
+    public void ConstructorInjection_WithOptionalParameter_WhenNotRegistered_UsesDefaultValue()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IService, ServiceWithOptionalParameter>();
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = provider.GetService(typeof(IService)) as ServiceWithOptionalParameter;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.OptionalValue);
+    }
+
+    [Fact]
+    public void ConstructorInjection_WithOptionalParameter_WhenRegistered_UsesRegisteredService()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<string>("test-value");
+        services.AddSingleton<IService, ServiceWithOptionalParameter>();
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = provider.GetService(typeof(IService)) as ServiceWithOptionalParameter;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("test-value", result.OptionalValue);
+    }
+
+    [Fact]
+    public void ConstructorInjection_WithOptionalAndRequiredParameters_ResolvesCorrectly()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IDependency, Dependency>();
+        services.AddSingleton<IService, ServiceWithOptionalAndRequiredParameters>();
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = provider.GetService(typeof(IService)) as ServiceWithOptionalAndRequiredParameters;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Required);
+        Assert.Equal("default", result.Optional); // Uses default value
+    }
+
+    [Fact]
+    public void ConstructorInjection_WithOptionalAndRequiredParameters_WhenOptionalRegistered_UsesRegisteredService()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddSingleton<IDependency, Dependency>();
+        services.AddSingleton<string>("custom-value");
+        services.AddSingleton<IService, ServiceWithOptionalAndRequiredParameters>();
+        var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = provider.GetService(typeof(IService)) as ServiceWithOptionalAndRequiredParameters;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotNull(result.Required);
+        Assert.Equal("custom-value", result.Optional); // Uses registered service
+    }
 }
 

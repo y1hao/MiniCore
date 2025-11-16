@@ -71,14 +71,39 @@ public class ServiceProvider : IServiceProvider, System.IServiceProvider, IServi
     /// </summary>
     internal object? GetService(Type serviceType, Dictionary<Type, object>? scopedInstances)
     {
+        // Handle IEnumerable<T> - Microsoft DI returns all registered services of that type
+        if (serviceType.IsGenericType && serviceType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+        {
+            var elementType = serviceType.GetGenericArguments()[0];
+            // Find all descriptors that match the element type
+            var descriptors = _services.Where(d => d.ServiceType == elementType).ToList();
+            
+            if (descriptors.Count > 0)
+            {
+                // Return array with all registered services
+                var array = Array.CreateInstance(elementType, descriptors.Count);
+                for (int i = 0; i < descriptors.Count; i++)
+                {
+                    var item = ResolveService(descriptors[i], elementType, scopedInstances);
+                    array.SetValue(item, i);
+                }
+                return array;
+            }
+            else
+            {
+                // Return empty collection if nothing registered
+                return Array.CreateInstance(elementType, 0);
+            }
+        }
+        
         // Find service descriptor
-        var descriptor = FindServiceDescriptor(serviceType);
-        if (descriptor == null)
+        var serviceDescriptor = FindServiceDescriptor(serviceType);
+        if (serviceDescriptor == null)
         {
             return null;
         }
 
-        return ResolveService(descriptor, serviceType, scopedInstances);
+        return ResolveService(serviceDescriptor, serviceType, scopedInstances);
     }
 
     /// <summary>
@@ -389,15 +414,56 @@ public class ServiceProvider : IServiceProvider, System.IServiceProvider, IServi
             for (int i = 0; i < parameters.Length; i++)
             {
                 var parameter = parameters[i];
-                // Find descriptor for parameter to pass to CreateInstance for lifetime checking
-                var paramDescriptor = FindServiceDescriptor(parameter.ParameterType);
-                var resolved = GetService(parameter.ParameterType, scopedInstances);
-                if (resolved == null)
+                
+                var paramType = parameter.ParameterType;
+                
+                // Handle IEnumerable<T> - Microsoft DI returns empty collection if nothing registered
+                if (paramType.IsGenericType && paramType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
                 {
-                    throw new InvalidOperationException(
-                        $"Unable to resolve service for type '{parameter.ParameterType}' required by constructor parameter '{parameter.Name}' of type '{implementationType}'.");
+                    var elementType = paramType.GetGenericArguments()[0];
+                    var resolved = GetService(paramType, scopedInstances);
+                    if (resolved != null)
+                    {
+                        arguments[i] = resolved;
+                    }
+                    else
+                    {
+                        // Create empty array for IEnumerable<T> if nothing registered
+                        var emptyArray = Array.CreateInstance(elementType, 0);
+                        arguments[i] = emptyArray;
+                    }
                 }
-                arguments[i] = resolved;
+                else
+                {
+                    // Try to resolve the parameter
+                    var resolved = GetService(paramType, scopedInstances);
+                    
+                    if (resolved != null)
+                    {
+                        // Service is registered, use it
+                        arguments[i] = resolved;
+                    }
+                    else if (parameter.HasDefaultValue)
+                    {
+                        // Parameter has default value, use it
+                        var defaultValue = parameter.DefaultValue;
+                        // Handle DBNull.Value (used for reference type defaults)
+                        if (defaultValue == DBNull.Value)
+                        {
+                            arguments[i] = null!;
+                        }
+                        else
+                        {
+                            arguments[i] = defaultValue!;
+                        }
+                    }
+                    else
+                    {
+                        // Required parameter without default value - must be registered
+                        throw new InvalidOperationException(
+                            $"Unable to resolve service for type '{paramType}' required by constructor parameter '{parameter.Name}' of type '{implementationType}'.");
+                    }
+                }
             }
 
             // Create instance
@@ -430,7 +496,7 @@ public class ServiceProvider : IServiceProvider, System.IServiceProvider, IServi
             {
                 Constructor = c,
                 Parameters = c.GetParameters(),
-                ResolvableCount = c.GetParameters().Count(p => CanResolveType(p.ParameterType))
+                ResolvableCount = c.GetParameters().Count(p => CanResolveParameter(p))
             })
             .Where(x => x.ResolvableCount == x.Parameters.Length) // All parameters must be resolvable
             .OrderByDescending(x => x.ResolvableCount)
@@ -446,7 +512,7 @@ public class ServiceProvider : IServiceProvider, System.IServiceProvider, IServi
     /// <returns>True if all parameters can be resolved.</returns>
     private bool CanResolveConstructor(ConstructorInfo constructor)
     {
-        return constructor.GetParameters().All(p => CanResolveType(p.ParameterType));
+        return constructor.GetParameters().All(p => CanResolveParameter(p));
     }
 
     /// <summary>
@@ -457,6 +523,31 @@ public class ServiceProvider : IServiceProvider, System.IServiceProvider, IServi
     private bool CanResolveType(Type type)
     {
         return FindServiceDescriptor(type) != null;
+    }
+
+    /// <summary>
+    /// Checks if a parameter can be resolved (either registered or has default value).
+    /// </summary>
+    /// <param name="parameter">The parameter to check.</param>
+    /// <returns>True if the parameter can be resolved or has a default value.</returns>
+    private bool CanResolveParameter(ParameterInfo parameter)
+    {
+        // If parameter has a default value (optional parameter), it's always resolvable
+        if (parameter.HasDefaultValue)
+        {
+            return true;
+        }
+        
+        var paramType = parameter.ParameterType;
+        
+        // IEnumerable<T> parameters are always resolvable (can return empty collection)
+        if (paramType.IsGenericType && paramType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+        {
+            return true;
+        }
+        
+        // Otherwise, check if the type is registered
+        return CanResolveType(paramType);
     }
 
     /// <summary>
