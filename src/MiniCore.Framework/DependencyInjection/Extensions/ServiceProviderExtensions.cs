@@ -20,10 +20,7 @@ public static class ServiceProviderExtensions
     /// </remarks>
     public static T? GetService<T>(this IServiceProvider provider)
     {
-        if (provider == null)
-        {
-            throw new ArgumentNullException(nameof(provider));
-        }
+        ArgumentNullException.ThrowIfNull(provider);
 
         return (T?)provider.GetService(typeof(T));
     }
@@ -52,10 +49,7 @@ public static class ServiceProviderExtensions
     public static T GetRequiredService<T>(this IServiceProvider provider)
         where T : notnull
     {
-        if (provider == null)
-        {
-            throw new ArgumentNullException(nameof(provider));
-        }
+        ArgumentNullException.ThrowIfNull(provider);
 
         return (T)GetRequiredService(provider, typeof(T));
     }
@@ -86,15 +80,8 @@ public static class ServiceProviderExtensions
     /// </remarks>
     public static object GetRequiredService(this IServiceProvider provider, Type serviceType)
     {
-        if (provider == null)
-        {
-            throw new ArgumentNullException(nameof(provider));
-        }
-
-        if (serviceType == null)
-        {
-            throw new ArgumentNullException(nameof(serviceType));
-        }
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(serviceType);
 
         var service = provider.GetService(serviceType);
         if (service == null)

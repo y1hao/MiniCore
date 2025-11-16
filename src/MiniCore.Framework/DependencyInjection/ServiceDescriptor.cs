@@ -73,7 +73,8 @@ public class ServiceDescriptor
         Func<IServiceProvider, object>? implementationFactory,
         ServiceLifetime lifetime)
     {
-        ServiceType = serviceType ?? throw new ArgumentNullException(nameof(serviceType));
+        ArgumentNullException.ThrowIfNull(serviceType);
+        ServiceType = serviceType;
         ImplementationType = implementationType;
         ImplementationInstance = implementationInstance;
         ImplementationFactory = implementationFactory;
@@ -113,10 +114,7 @@ public class ServiceDescriptor
     public static ServiceDescriptor Singleton<TService>(TService instance)
         where TService : class
     {
-        if (instance == null)
-        {
-            throw new ArgumentNullException(nameof(instance));
-        }
+        ArgumentNullException.ThrowIfNull(instance);
 
         return new ServiceDescriptor(
             typeof(TService),
@@ -135,10 +133,7 @@ public class ServiceDescriptor
     public static ServiceDescriptor Singleton<TService>(Func<IServiceProvider, TService> factory)
         where TService : class
     {
-        if (factory == null)
-        {
-            throw new ArgumentNullException(nameof(factory));
-        }
+        ArgumentNullException.ThrowIfNull(factory);
 
         return new ServiceDescriptor(
             typeof(TService),
@@ -170,10 +165,7 @@ public class ServiceDescriptor
     public static ServiceDescriptor Scoped<TService>(Func<IServiceProvider, TService> factory)
         where TService : class
     {
-        if (factory == null)
-        {
-            throw new ArgumentNullException(nameof(factory));
-        }
+        ArgumentNullException.ThrowIfNull(factory);
 
         return new ServiceDescriptor(
             typeof(TService),
@@ -205,10 +197,7 @@ public class ServiceDescriptor
     public static ServiceDescriptor Transient<TService>(Func<IServiceProvider, TService> factory)
         where TService : class
     {
-        if (factory == null)
-        {
-            throw new ArgumentNullException(nameof(factory));
-        }
+        ArgumentNullException.ThrowIfNull(factory);
 
         return new ServiceDescriptor(
             typeof(TService),
@@ -230,15 +219,8 @@ public class ServiceDescriptor
     /// </remarks>
     public static ServiceDescriptor Describe(Type serviceType, Type implementationType, ServiceLifetime lifetime)
     {
-        if (serviceType == null)
-        {
-            throw new ArgumentNullException(nameof(serviceType));
-        }
-
-        if (implementationType == null)
-        {
-            throw new ArgumentNullException(nameof(implementationType));
-        }
+        ArgumentNullException.ThrowIfNull(serviceType);
+        ArgumentNullException.ThrowIfNull(implementationType);
 
         return new ServiceDescriptor(serviceType, implementationType, null, null, lifetime);
     }
@@ -252,15 +234,8 @@ public class ServiceDescriptor
     /// <returns>A new ServiceDescriptor.</returns>
     public static ServiceDescriptor Describe(Type serviceType, Func<IServiceProvider, object> factory, ServiceLifetime lifetime)
     {
-        if (serviceType == null)
-        {
-            throw new ArgumentNullException(nameof(serviceType));
-        }
-
-        if (factory == null)
-        {
-            throw new ArgumentNullException(nameof(factory));
-        }
+        ArgumentNullException.ThrowIfNull(serviceType);
+        ArgumentNullException.ThrowIfNull(factory);
 
         return new ServiceDescriptor(serviceType, null, null, factory, lifetime);
     }
@@ -277,15 +252,8 @@ public class ServiceDescriptor
     /// </remarks>
     public static ServiceDescriptor Describe(Type serviceType, object instance, ServiceLifetime lifetime)
     {
-        if (serviceType == null)
-        {
-            throw new ArgumentNullException(nameof(serviceType));
-        }
-
-        if (instance == null)
-        {
-            throw new ArgumentNullException(nameof(instance));
-        }
+        ArgumentNullException.ThrowIfNull(serviceType);
+        ArgumentNullException.ThrowIfNull(instance);
 
         return new ServiceDescriptor(serviceType, null, instance, null, lifetime);
     }
