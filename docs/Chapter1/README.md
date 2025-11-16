@@ -66,7 +66,7 @@ Phase 1 focuses on implementing a minimal Dependency Injection (DI) container to
 
 ```
 MiniCore.Framework/
-└── DI/
+└── DependencyInjection/
     ├── IServiceProvider.cs          # Core service provider interface
     ├── IServiceCollection.cs        # Service registration interface
     ├── IServiceScope.cs             # Scope interface

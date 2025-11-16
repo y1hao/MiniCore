@@ -6,7 +6,7 @@ The core framework implementation for MiniCore, progressively replacing Microsof
 
 ```
 MiniCore.Framework/
-├── DI/                    # Dependency Injection (Phase 1)
+├── DependencyInjection/   # Dependency Injection (Phase 1)
 │   ├── Extensions/        # Extension methods
 │   └── ...
 ├── Config/                # Configuration (Phase 2)

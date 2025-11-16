@@ -147,7 +147,7 @@
 
 ## Migration
 
-- [ ] Update `MiniCore.Web` to use `MiniCore.Framework.DI`
+- [ ] Update `MiniCore.Web` to use `MiniCore.Framework.DependencyInjection`
 - [ ] Remove `Microsoft.Extensions.DependencyInjection` package reference
 - [ ] Verify application runs correctly
 - [ ] Verify all tests pass

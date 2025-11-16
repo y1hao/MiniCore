@@ -71,7 +71,7 @@ var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
 ```
 MiniCore.Framework/
-└── DI/
+└── DependencyInjection/
     ├── Interfaces/
     │   ├── IServiceProvider.cs
     │   ├── IServiceCollection.cs

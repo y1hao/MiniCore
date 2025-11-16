@@ -8,7 +8,7 @@
 src/
 └── MiniCore.Framework/
     ├── MiniCore.Framework.csproj
-    └── DI/
+    └── DependencyInjection/
         ├── IServiceProvider.cs
         ├── IServiceCollection.cs
         ├── IServiceScope.cs
@@ -28,7 +28,7 @@ src/
 
 #### ServiceLifetime.cs
 ```csharp
-namespace MiniCore.Framework.DI;
+namespace MiniCore.Framework.DependencyInjection;
 
 public enum ServiceLifetime
 {
@@ -40,7 +40,7 @@ public enum ServiceLifetime
 
 #### ServiceDescriptor.cs
 ```csharp
-namespace MiniCore.Framework.DI;
+namespace MiniCore.Framework.DependencyInjection;
 
 public class ServiceDescriptor
 {
@@ -68,7 +68,7 @@ public class ServiceDescriptor
 
 #### IServiceProvider.cs
 ```csharp
-namespace MiniCore.Framework.DI;
+namespace MiniCore.Framework.DependencyInjection;
 
 public interface IServiceProvider
 {
@@ -85,7 +85,7 @@ public static class ServiceProviderExtensions
 
 #### IServiceCollection.cs
 ```csharp
-namespace MiniCore.Framework.DI;
+namespace MiniCore.Framework.DependencyInjection;
 
 public interface IServiceCollection : IList<ServiceDescriptor>
 {
@@ -94,7 +94,7 @@ public interface IServiceCollection : IList<ServiceDescriptor>
 
 #### IServiceScope.cs
 ```csharp
-namespace MiniCore.Framework.DI;
+namespace MiniCore.Framework.DependencyInjection;
 
 public interface IServiceScope : IDisposable
 {
@@ -104,7 +104,7 @@ public interface IServiceScope : IDisposable
 
 #### IServiceScopeFactory.cs
 ```csharp
-namespace MiniCore.Framework.DI;
+namespace MiniCore.Framework.DependencyInjection;
 
 public interface IServiceScopeFactory
 {
@@ -116,7 +116,7 @@ public interface IServiceScopeFactory
 
 #### ServiceCollection.cs
 ```csharp
-namespace MiniCore.Framework.DI;
+namespace MiniCore.Framework.DependencyInjection;
 
 public class ServiceCollection : List<ServiceDescriptor>, IServiceCollection
 {
@@ -177,7 +177,7 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
 
 #### ServiceScope.cs
 ```csharp
-namespace MiniCore.Framework.DI;
+namespace MiniCore.Framework.DependencyInjection;
 
 public class ServiceScope : IServiceScope
 {
@@ -210,7 +210,7 @@ public class ServiceScope : IServiceScope
 
 #### ServiceCollectionExtensions.cs
 ```csharp
-namespace MiniCore.Framework.DI;
+namespace MiniCore.Framework.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
@@ -240,7 +240,7 @@ public static class ServiceCollectionExtensions
 
 #### ServiceProviderOptions.cs
 ```csharp
-namespace MiniCore.Framework.DI;
+namespace MiniCore.Framework.DependencyInjection;
 
 public class ServiceProviderOptions
 {
@@ -404,9 +404,9 @@ private ServiceDescriptor? ResolveOpenGeneric(Type serviceType)
 - Behavior should match Microsoft's implementation
 
 **Gradual Migration:**
-1. Create MiniCore.Framework.DI namespace
+1. Create MiniCore.Framework.DependencyInjection namespace
 2. Implement all interfaces and classes
-3. Update Program.cs to use `MiniCore.Framework.DI` instead of `Microsoft.Extensions.DependencyInjection`
+3. Update Program.cs to use `MiniCore.Framework.DependencyInjection` instead of `Microsoft.Extensions.DependencyInjection`
 4. Verify all tests pass
 5. Remove Microsoft.Extensions.DependencyInjection package reference
 
