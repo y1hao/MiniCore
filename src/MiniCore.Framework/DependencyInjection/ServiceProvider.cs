@@ -25,7 +25,9 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
     private readonly ServiceCollection _services;
     private readonly ServiceProviderOptions _options;
     private readonly Dictionary<Type, object> _singletons;
+    private readonly Dictionary<Type, ServiceDescriptor> _closedGenericDescriptors = new Dictionary<Type, ServiceDescriptor>();
     private readonly object _singletonLock = new object();
+    private readonly object _closedGenericLock = new object();
     private readonly ThreadLocal<HashSet<Type>> _resolutionStack = new ThreadLocal<HashSet<Type>>(() => new HashSet<Type>());
     private bool _disposed;
 
@@ -125,9 +127,77 @@ public class ServiceProvider : IServiceProvider, IServiceScopeFactory, IDisposab
             return descriptor;
         }
 
-        // TODO: Handle open generics when lifetimes are added
-        // For now, return null if not found
+        // Check cached closed generic descriptors
+        lock (_closedGenericLock)
+        {
+            if (_closedGenericDescriptors.TryGetValue(serviceType, out var cachedDescriptor))
+            {
+                return cachedDescriptor;
+            }
+        }
+
+        // Handle open generics
+        if (serviceType.IsGenericType && !serviceType.IsGenericTypeDefinition)
+        {
+            return ResolveOpenGeneric(serviceType);
+        }
+
         return null;
+    }
+
+    /// <summary>
+    /// Resolves an open generic registration for a closed generic service type.
+    /// </summary>
+    /// <param name="closedGenericServiceType">The closed generic service type (e.g., ILogger&lt;MyClass&gt;).</param>
+    /// <returns>The service descriptor for the closed generic, or null if no matching open generic is registered.</returns>
+    private ServiceDescriptor? ResolveOpenGeneric(Type closedGenericServiceType)
+    {
+        var genericTypeDefinition = closedGenericServiceType.GetGenericTypeDefinition();
+        var genericArguments = closedGenericServiceType.GetGenericArguments();
+
+        // Find matching open generic registration
+        var openGenericDescriptor = _services.LastOrDefault(d =>
+            d.ServiceType.IsGenericTypeDefinition &&
+            d.ServiceType == genericTypeDefinition &&
+            d.ImplementationType != null &&
+            d.ImplementationType.IsGenericTypeDefinition);
+
+        if (openGenericDescriptor == null)
+        {
+            return null;
+        }
+
+        // Construct closed generic implementation type
+        Type closedImplementationType;
+        try
+        {
+            closedImplementationType = openGenericDescriptor.ImplementationType!.MakeGenericType(genericArguments);
+        }
+        catch (ArgumentException)
+        {
+            // Generic arguments don't match (e.g., wrong number of type parameters)
+            return null;
+        }
+
+        // Verify the closed implementation type is assignable to the closed service type
+        if (!closedGenericServiceType.IsAssignableFrom(closedImplementationType))
+        {
+            return null;
+        }
+
+        // Create descriptor for closed generic
+        var closedDescriptor = ServiceDescriptor.Describe(
+            closedGenericServiceType,
+            closedImplementationType,
+            openGenericDescriptor.Lifetime);
+
+        // Cache the closed generic descriptor
+        lock (_closedGenericLock)
+        {
+            _closedGenericDescriptors[closedGenericServiceType] = closedDescriptor;
+        }
+
+        return closedDescriptor;
     }
 
     /// <summary>
