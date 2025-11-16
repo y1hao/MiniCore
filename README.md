@@ -243,6 +243,19 @@ Phase 0 establishes the foundation by creating a fully functional URL shortener 
 
 **Read More:** [Chapter 0 Documentation](docs/Chapter0/README.md)
 
+### [Chapter 1: Dependency Injection Framework](docs/Chapter1/README.md)
+
+Phase 1 focuses on implementing a minimal Dependency Injection container to replace `Microsoft.Extensions.DependencyInjection`. This is the foundation that all other framework components will build upon.
+
+**Key Goals:**
+- ✅ Implement core DI interfaces matching Microsoft's API surface
+- ✅ Support three service lifetimes: Transient, Scoped, and Singleton
+- ✅ Enable constructor injection with automatic dependency resolution
+- ✅ Support open-generic types (e.g., `ILogger<T>`)
+- ✅ Provide service scope management for scoped lifetime services
+
+**Read More:** [Chapter 1 Documentation](docs/Chapter1/README.md)
+
 ---
 
 ## 📝 License
