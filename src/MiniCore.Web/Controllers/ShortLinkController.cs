@@ -9,18 +9,11 @@ namespace MiniCore.Web.Controllers;
 
 [ApiController]
 [Route("api/links")]
-public class ShortLinkController : ControllerBase
+public class ShortLinkController(AppDbContext context, ILogger<ShortLinkController> logger, IConfiguration configuration) : ControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<ShortLinkController> _logger;
-    private readonly IConfiguration _configuration;
-
-    public ShortLinkController(AppDbContext context, ILogger<ShortLinkController> logger, IConfiguration configuration)
-    {
-        _context = context;
-        _logger = logger;
-        _configuration = configuration;
-    }
+    private readonly AppDbContext _context = context;
+    private readonly ILogger<ShortLinkController> _logger = logger;
+    private readonly IConfiguration _configuration = configuration;
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ShortLinkDto>>> GetLinks([FromQuery] int page = 1, [FromQuery] int pageSize = 50)

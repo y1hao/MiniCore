@@ -5,14 +5,9 @@ using MiniCore.Web.Models;
 
 namespace MiniCore.Web.Controllers;
 
-public class AdminController : Controller
+public class AdminController(AppDbContext context) : Controller
 {
-    private readonly AppDbContext _context;
-
-    public AdminController(AppDbContext context)
-    {
-        _context = context;
-    }
+    private readonly AppDbContext _context = context;
 
     [HttpGet("/admin")]
     public async Task<IActionResult> Index()

@@ -5,20 +5,14 @@ using MiniCore.Web.Models;
 
 namespace MiniCore.Web.Controllers;
 
-public class RedirectController : ControllerBase
+public class RedirectController(AppDbContext context, ILogger<RedirectController> logger) : ControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<RedirectController> _logger;
-
-    public RedirectController(AppDbContext context, ILogger<RedirectController> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
+    private readonly AppDbContext _context = context;
+    private readonly ILogger<RedirectController> _logger = logger;
 
     public async Task<IActionResult> RedirectToUrl(string path)
     {
-        // Extract shortCode from path (MapFallbackToController passes the entire unmatched path)
+        // Extract shortCode from path (MapFallbackToController with {*path} pattern passes the entire unmatched path)
         var shortCode = path?.TrimStart('/').Split('/')[0];
         
         if (string.IsNullOrEmpty(shortCode))
