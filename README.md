@@ -65,13 +65,18 @@ Implemented a minimal DI container to replace `Microsoft.Extensions.DependencyIn
 - ✅ Constructor injection
 - ✅ Open-generic support (`ILogger<T>`)
 
-### Phase 2: Configuration Framework
+### Phase 2: Configuration Framework ✅
 Replace `Microsoft.Extensions.Configuration`.
 
+**Status:** ✅ Complete  
+**See:** [Chapter 2 Documentation](docs/Chapter2/README.md)
+
 **Key Features:**
-- Hierarchical key-value store (`IConfiguration`, `IConfigurationSection`)
-- JSON + Environment variable sources
-- `IConfigurationBuilder` to compose multiple sources
+- ✅ Hierarchical key-value store (`IConfiguration`, `IConfigurationSection`)
+- ✅ JSON + Environment variable sources
+- ✅ `IConfigurationBuilder` to compose multiple sources
+- ✅ POCO binding (`Bind<T>()`, `GetValue<T>()`)
+- ✅ Configuration reload tokens (`IChangeToken`)
 
 ### Phase 3: Logging Framework
 Implement the basic abstractions of `Microsoft.Extensions.Logging`.
@@ -150,7 +155,7 @@ MiniCore/
 │   ├── MiniCore.Reference.Tests/   # Tests for reference app
 │   └── MiniCore.Framework/         # Custom framework
 │       ├── DependencyInjection/    # ✅ Phase 1 Complete
-│       ├── Config/                  # Phase 2
+│       ├── Configuration/          # ✅ Phase 2 Complete
 │       ├── Logging/                 # Phase 3
 │       ├── Hosting/                 # Phase 4
 │       ├── Server/                  # Phase 7
@@ -160,6 +165,7 @@ MiniCore/
 ├── docs/
 │   ├── Chapter0/                   # Phase 0 documentation ✅
 │   ├── Chapter1/                   # Phase 1 documentation ✅
+│   ├── Chapter2/                   # Phase 2 documentation ✅
 │   └── SPEC.md                    # Detailed specification
 └── README.md                      # This file
 ```
@@ -211,6 +217,8 @@ dotnet test src/MiniCore.Web.Tests/MiniCore.Web.Tests.csproj
 
 - **[SPEC.md](SPEC.md)** - Complete project specification with detailed phase descriptions
 - **[Chapter 0: Baseline Application](docs/Chapter0/README.md)** - Phase 0 implementation details
+- **[Chapter 1: Dependency Injection Framework](docs/Chapter1/README.md)** - Phase 1 implementation details ✅
+- **[Chapter 2: Configuration Framework](docs/Chapter2/README.md)** - Phase 2 implementation details ✅
 
 ## 🎯 Expected Learning Outcomes
 
@@ -264,6 +272,25 @@ Phase 1 successfully implemented a minimal Dependency Injection container to rep
 
 **Read More:** [Chapter 1 Documentation](docs/Chapter1/README.md)
 
+### [Chapter 2: Configuration Framework](docs/Chapter2/README.md) ✅
+
+Phase 2 successfully implemented a minimal Configuration framework to replace `Microsoft.Extensions.Configuration`. This provides a hierarchical key-value store for application settings, supporting multiple configuration sources with proper precedence handling.
+
+**Status:** ✅ Complete
+
+**Key Accomplishments:**
+- ✅ Implemented core configuration interfaces matching Microsoft's API surface
+- ✅ Hierarchical key-value storage with colon-separated keys (e.g., `"A:B:C"`)
+- ✅ Multiple configuration sources (JSON files, environment variables)
+- ✅ `IConfigurationBuilder` to compose multiple sources
+- ✅ Configuration sections (`IConfigurationSection`) with path-aware navigation
+- ✅ POCO binding (`Bind<T>()`, `GetValue<T>()`) for mapping configuration to objects
+- ✅ Configuration reload tokens (`IChangeToken`) for change notifications
+- ✅ Comprehensive test coverage
+- ✅ Integrated into MiniCore.Web application
+
+**Read More:** [Chapter 2 Documentation](docs/Chapter2/README.md)
+
 ---
 
 ## 📝 License
@@ -276,5 +303,5 @@ This is an educational project. Feel free to explore, learn, and adapt the code 
 
 ---
 
-**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Next: Phase 2 - Configuration Framework
+**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Next: Phase 3 - Logging Framework
 
