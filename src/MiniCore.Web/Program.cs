@@ -11,6 +11,20 @@ var builder = WebApplication.CreateBuilder(args);
 // See: docs/Chapter1/MICROSOFT_DI_DEPENDENCY_ANALYSIS.md
 builder.Host.UseServiceProviderFactory(new MiniCore.Web.ServiceProviderFactory());
 
+// TODO: REMOVE IN PHASE 4 (Host Abstraction)
+// Build our custom configuration and register it in DI.
+// This allows controllers and services to use our custom IConfiguration implementation.
+// In Phase 4, we'll build configuration as part of our own HostBuilder.
+var customConfiguration = MiniCore.Web.ConfigurationFactory.CreateConfiguration(
+    builder.Environment.ContentRootPath,
+    builder.Environment.EnvironmentName);
+
+// Register our custom configuration as IConfiguration in DI
+// This allows it to be injected into controllers and services
+// We use an adapter to bridge our custom configuration with Microsoft's IConfiguration interface
+builder.Services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(
+    new MiniCore.Web.ConfigurationAdapter(customConfiguration));
+
 // Add services
 // Only register SQLite if not in testing environment (tests will register InMemory)
 if (!builder.Environment.IsEnvironment("Testing"))
