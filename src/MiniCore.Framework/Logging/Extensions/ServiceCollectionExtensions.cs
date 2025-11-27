@@ -81,7 +81,10 @@ public interface ILoggingBuilder
     ILoggingBuilder AddFile(string logFilePath, LogLevel minLevel = LogLevel.Information);
 }
 
-internal class LoggingBuilder : ILoggingBuilder
+/// <summary>
+/// Default implementation of <see cref="ILoggingBuilder"/>.
+/// </summary>
+public class LoggingBuilder : ILoggingBuilder
 {
     public IServiceCollection Services { get; }
     private readonly List<ILoggerProvider> _providers;
