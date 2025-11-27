@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using MiniCore.Framework.Logging;
+using MiniCore.Framework.Logging.Console;
+using MiniCore.Framework.Logging.File;
 using MiniCore.Web.Data;
 using MiniCore.Web.Services;
 
@@ -24,6 +27,31 @@ var customConfiguration = MiniCore.Web.ConfigurationFactory.CreateConfiguration(
 // We use an adapter to bridge our custom configuration with Microsoft's IConfiguration interface
 builder.Services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(
     new MiniCore.Web.ConfigurationAdapter(customConfiguration));
+
+// TODO: REMOVE IN PHASE 4 (Host Abstraction)
+// Build our custom logging and register it in DI.
+// This allows controllers and services to use our custom ILogger implementation.
+// In Phase 4, we'll build logging as part of our own HostBuilder.
+var loggingFactory = new MiniCore.Framework.Logging.LoggerFactory();
+var minLogLevel = builder.Environment.IsDevelopment() 
+    ? MiniCore.Framework.Logging.LogLevel.Debug 
+    : MiniCore.Framework.Logging.LogLevel.Information;
+loggingFactory.AddProvider(new MiniCore.Framework.Logging.Console.ConsoleLoggerProvider(minLogLevel));
+
+// Add file logger if log path is configured
+var logPath = customConfiguration["Logging:File:Path"];
+if (!string.IsNullOrEmpty(logPath))
+{
+    var fileMinLevel = Enum.TryParse<MiniCore.Framework.Logging.LogLevel>(customConfiguration["Logging:File:MinLevel"], out var level) 
+        ? level 
+        : MiniCore.Framework.Logging.LogLevel.Warning;
+    loggingFactory.AddProvider(new MiniCore.Framework.Logging.File.FileLoggerProvider(logPath, fileMinLevel));
+}
+
+// Register our custom logging factory
+// ASP.NET Core will use this factory to create loggers via the adapter
+builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(
+    new MiniCore.Web.LoggingFactoryAdapter(loggingFactory));
 
 // Add services
 // Only register SQLite if not in testing environment (tests will register InMemory)
