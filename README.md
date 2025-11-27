@@ -78,13 +78,20 @@ Replace `Microsoft.Extensions.Configuration`.
 - ✅ POCO binding (`Bind<T>()`, `GetValue<T>()`)
 - ✅ Configuration reload tokens (`IChangeToken`)
 
-### Phase 3: Logging Framework
+### Phase 3: Logging Framework ✅
 Implement the basic abstractions of `Microsoft.Extensions.Logging`.
 
+**Status:** ✅ Complete  
+**See:** [Chapter 3 Documentation](docs/Chapter3/README.md)
+
 **Key Features:**
-- `ILogger`, `ILoggerFactory`, `ILogProvider`
-- Console + File loggers
-- Log levels, message templates
+- ✅ `ILogger`, `ILoggerFactory`, `ILoggerProvider`
+- ✅ Console + File loggers with color coding
+- ✅ Log levels (Trace, Debug, Information, Warning, Error, Critical)
+- ✅ Message templates with placeholder support
+- ✅ Generic `ILogger<T>` for automatic category naming
+- ✅ Exception logging with stack traces
+- ✅ DI integration (`AddLogging()`, `AddConsole()`, `AddFile()`)
 
 ### Phase 4: Host Abstraction
 Build a minimal equivalent of `IHost` and `HostBuilder`.
@@ -156,7 +163,7 @@ MiniCore/
 │   └── MiniCore.Framework/         # Custom framework
 │       ├── DependencyInjection/    # ✅ Phase 1 Complete
 │       ├── Configuration/          # ✅ Phase 2 Complete
-│       ├── Logging/                 # Phase 3
+│       ├── Logging/                 # ✅ Phase 3 Complete
 │       ├── Hosting/                 # Phase 4
 │       ├── Server/                  # Phase 7
 │       ├── Routing/                 # Phase 6
@@ -291,6 +298,26 @@ Phase 2 successfully implemented a minimal Configuration framework to replace `M
 
 **Read More:** [Chapter 2 Documentation](docs/Chapter2/README.md)
 
+### [Chapter 3: Logging Framework](docs/Chapter3/README.md) ✅
+
+Phase 3 successfully implemented a minimal Logging framework to replace `Microsoft.Extensions.Logging`. This provides cross-cutting logging infrastructure with support for multiple providers and automatic category naming.
+
+**Status:** ✅ Complete
+
+**Key Accomplishments:**
+- ✅ Implemented core logging interfaces matching Microsoft's API surface
+- ✅ Console logger with color-coded output by log level
+- ✅ File logger with thread-safe writing and directory creation
+- ✅ Log level filtering (Trace, Debug, Information, Warning, Error, Critical)
+- ✅ Message template formatting with placeholder support (`{PropertyName}`)
+- ✅ Generic `ILogger<T>` for automatic category naming from type
+- ✅ Exception logging with stack traces and inner exception support
+- ✅ DI integration (`AddLogging()`, `AddConsole()`, `AddFile()`)
+- ✅ Comprehensive test coverage (32/34 tests passing)
+- ✅ Integrated into MiniCore.Web application
+
+**Read More:** [Chapter 3 Documentation](docs/Chapter3/README.md)
+
 ---
 
 ## 📝 License
@@ -303,5 +330,5 @@ This is an educational project. Feel free to explore, learn, and adapt the code 
 
 ---
 
-**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Next: Phase 3 - Logging Framework
+**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Next: Phase 4 - Host Abstraction
 
