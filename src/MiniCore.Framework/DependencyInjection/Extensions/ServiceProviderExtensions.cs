@@ -91,5 +91,28 @@ public static class ServiceProviderExtensions
 
         return service;
     }
+
+    /// <summary>
+    /// Creates a new <see cref="IServiceScope"/> that can be used to resolve scoped services.
+    /// </summary>
+    /// <param name="provider">The <see cref="IServiceProvider"/> to create a scope from.</param>
+    /// <returns>A new <see cref="IServiceScope"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="provider"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the provider does not implement <see cref="IServiceScopeFactory"/>.</exception>
+    /// <remarks>
+    /// This extension method allows creating scopes from <see cref="IServiceProvider"/> instances.
+    /// The provider must implement <see cref="IServiceScopeFactory"/> for this to work.
+    /// </remarks>
+    public static IServiceScope CreateScope(this IServiceProvider provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        if (provider is IServiceScopeFactory scopeFactory)
+        {
+            return scopeFactory.CreateScope();
+        }
+
+        throw new InvalidOperationException($"The service provider does not implement {nameof(IServiceScopeFactory)}.");
+    }
 }
 
