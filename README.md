@@ -93,13 +93,21 @@ Implement the basic abstractions of `Microsoft.Extensions.Logging`.
 - ✅ Exception logging with stack traces
 - ✅ DI integration (`AddLogging()`, `AddConsole()`, `AddFile()`)
 
-### Phase 4: Host Abstraction
-Build a minimal equivalent of `IHost` and `HostBuilder`.
+### Phase 4: Host Abstraction ✅
+Build a minimal equivalent of `IHost` and `HostBuilder`, plus `WebApplicationBuilder` and `WebApplication` for web applications.
+
+**Status:** ✅ Complete  
+**See:** [Chapter 4 Documentation](docs/Chapter4/README.md)
 
 **Key Features:**
-- `HostBuilder` with `ConfigureServices`, `ConfigureLogging`, `ConfigureAppConfiguration`
-- Builds unified `MiniHost` object
-- Registers `IHostApplicationLifetime` for graceful start/stop
+- ✅ `HostBuilder` with `ConfigureServices`, `ConfigureLogging`, `ConfigureAppConfiguration`
+- ✅ Builds unified `Host` object
+- ✅ Registers `IHostApplicationLifetime` for graceful start/stop
+- ✅ `IWebHostEnvironment` interface for environment information
+- ✅ `WebApplicationBuilder` class for building web applications
+- ✅ `WebApplication` class with stub methods for middleware/routing/server (Phases 5-7)
+- ✅ Composes DI + Config + Logging
+- ✅ Background service lifecycle management
 
 ### Phase 5: Middleware Pipeline
 Recreate `Use`, `UseMiddleware`, and request-delegate chaining.
@@ -164,7 +172,7 @@ MiniCore/
 │       ├── DependencyInjection/    # ✅ Phase 1 Complete
 │       ├── Configuration/          # ✅ Phase 2 Complete
 │       ├── Logging/                 # ✅ Phase 3 Complete
-│       ├── Hosting/                 # Phase 4
+│       ├── Hosting/                 # ✅ Phase 4 Complete
 │       ├── Server/                  # Phase 7
 │       ├── Routing/                 # Phase 6
 │       ├── Middleware/              # Phase 5
@@ -173,6 +181,8 @@ MiniCore/
 │   ├── Chapter0/                   # Phase 0 documentation ✅
 │   ├── Chapter1/                   # Phase 1 documentation ✅
 │   ├── Chapter2/                   # Phase 2 documentation ✅
+│   ├── Chapter3/                   # Phase 3 documentation ✅
+│   ├── Chapter4/                   # Phase 4 documentation ✅
 │   └── SPEC.md                    # Detailed specification
 └── README.md                      # This file
 ```
@@ -226,6 +236,8 @@ dotnet test src/MiniCore.Web.Tests/MiniCore.Web.Tests.csproj
 - **[Chapter 0: Baseline Application](docs/Chapter0/README.md)** - Phase 0 implementation details
 - **[Chapter 1: Dependency Injection Framework](docs/Chapter1/README.md)** - Phase 1 implementation details ✅
 - **[Chapter 2: Configuration Framework](docs/Chapter2/README.md)** - Phase 2 implementation details ✅
+- **[Chapter 3: Logging Framework](docs/Chapter3/README.md)** - Phase 3 implementation details ✅
+- **[Chapter 4: Host Abstraction](docs/Chapter4/README.md)** - Phase 4 implementation details ✅
 
 ## 🎯 Expected Learning Outcomes
 
@@ -243,6 +255,10 @@ dotnet test src/MiniCore.Web.Tests/MiniCore.Web.Tests.csproj
 | `IConfiguration` | Config Access | Key lookup, sections |
 | `ILogger` | Logging | Levels, message formatting |
 | `IHost` | Composition root | Lifecycle control |
+| `IHostBuilder` | Host configuration | `ConfigureServices`, `Build()` |
+| `IWebHostEnvironment` | Web environment | `ContentRootPath`, `EnvironmentName` |
+| `WebApplicationBuilder` | Web app builder | `CreateBuilder()`, `Build()` |
+| `WebApplication` | Web application | `Run()`, middleware/routing stubs |
 | `IServer` | HTTP Server | `StartAsync`, `StopAsync` |
 | `IHostedService` | Background tasks | `StartAsync`, `StopAsync` |
 | `RequestDelegate` | Middleware link | Async invocation |
@@ -318,6 +334,26 @@ Phase 3 successfully implemented a minimal Logging framework to replace `Microso
 
 **Read More:** [Chapter 3 Documentation](docs/Chapter3/README.md)
 
+### [Chapter 4: Host Abstraction](docs/Chapter4/README.md) ✅
+
+Phase 4 successfully implemented a minimal Host abstraction to replace `Microsoft.Extensions.Hosting`. This provides the composition root that ties together the DI container, configuration sources, logging providers, and manages the application lifecycle. Additionally, we implemented `WebApplicationBuilder` and `WebApplication` with stub methods for future middleware, routing, and HTTP server implementations.
+
+**Status:** ✅ Complete
+
+**Key Accomplishments:**
+- ✅ Implemented core hosting interfaces matching Microsoft's API surface
+- ✅ `HostBuilder` with fluent configuration API (`ConfigureServices`, `ConfigureLogging`, `ConfigureAppConfiguration`)
+- ✅ `Host` implementation that composes DI + Config + Logging
+- ✅ `IHostApplicationLifetime` for graceful startup and shutdown
+- ✅ Background service lifecycle management (`IHostedService`)
+- ✅ `IWebHostEnvironment` interface for environment information
+- ✅ `WebApplicationBuilder` class for building web applications
+- ✅ `WebApplication` class with stub methods for middleware/routing/server (Phases 5-7)
+- ✅ Comprehensive test coverage (35 tests: 28 passing, 7 skipped for unimplemented features)
+- ✅ Ready for integration when middleware, routing, and HTTP server are implemented
+
+**Read More:** [Chapter 4 Documentation](docs/Chapter4/README.md)
+
 ---
 
 ## 📝 License
@@ -330,5 +366,5 @@ This is an educational project. Feel free to explore, learn, and adapt the code 
 
 ---
 
-**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Next: Phase 4 - Host Abstraction
+**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Next: Phase 5 - Middleware Pipeline
 

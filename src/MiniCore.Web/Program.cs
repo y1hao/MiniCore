@@ -1,7 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using MiniCore.Framework.Logging;
-using MiniCore.Framework.Logging.Console;
-using MiniCore.Framework.Logging.File;
 using MiniCore.Web.Data;
 using MiniCore.Web.Services;
 
