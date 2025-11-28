@@ -1,6 +1,7 @@
 using System.Collections;
 using MiniCore.Framework.DependencyInjection;
 using MiniCore.Framework.Http.Abstractions;
+using MiniCore.Framework.Routing.Abstractions;
 
 namespace MiniCore.Framework.Http;
 
@@ -10,6 +11,7 @@ namespace MiniCore.Framework.Http;
 public class HttpContext : IHttpContext
 {
     private bool _aborted;
+    private RouteData? _routeData;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpContext"/> class.
@@ -32,6 +34,26 @@ public class HttpContext : IHttpContext
 
     /// <inheritdoc />
     public DependencyInjection.IServiceProvider RequestServices { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the route data for this request.
+    /// </summary>
+    public RouteData? RouteData
+    {
+        get => _routeData;
+        set
+        {
+            _routeData = value;
+            // Also store route values in Items for compatibility
+            if (value != null)
+            {
+                foreach (var kvp in value.Values)
+                {
+                    Items[$"route:{kvp.Key}"] = kvp.Value;
+                }
+            }
+        }
+    }
 
     /// <inheritdoc />
     public void Abort()

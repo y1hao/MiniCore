@@ -2,6 +2,8 @@ using MiniCore.Framework.Configuration;
 using MiniCore.Framework.Configuration.Abstractions;
 using MiniCore.Framework.DependencyInjection;
 using MiniCore.Framework.Logging;
+using MiniCore.Framework.Routing;
+using MiniCore.Framework.Routing.Abstractions;
 
 namespace MiniCore.Framework.Hosting;
 
@@ -111,6 +113,19 @@ public class WebApplicationBuilder
         // Register configuration in services
         _services.AddSingleton<IConfiguration>(_configuration);
         _services.AddSingleton<IConfigurationRoot>(_configuration);
+
+        // Register routing services
+        _services.AddSingleton<IRouteMatcher, RouteMatcher>();
+        _services.AddSingleton<IRouteRegistry>(serviceProvider =>
+        {
+            var matcher = serviceProvider.GetRequiredService<IRouteMatcher>();
+            return new RouteRegistry(matcher);
+        });
+        _services.AddSingleton<ControllerMapper>(serviceProvider =>
+        {
+            var routeRegistry = serviceProvider.GetRequiredService<IRouteRegistry>();
+            return new ControllerMapper(routeRegistry, serviceProvider);
+        });
 
         // Configure host builder with our services
         _hostBuilder.ConfigureServices(services =>

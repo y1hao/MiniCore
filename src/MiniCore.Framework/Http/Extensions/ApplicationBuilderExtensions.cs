@@ -3,6 +3,7 @@ using MiniCore.Framework.Http.Abstractions;
 using MiniCore.Framework.Http.Middleware;
 using MiniCore.Framework.Hosting;
 using MiniCore.Framework.Logging;
+using MiniCore.Framework.Routing.Abstractions;
 
 namespace MiniCore.Framework.Http.Extensions;
 
@@ -87,7 +88,8 @@ public static class ApplicationBuilderExtensions
 
         return app.Use(next =>
         {
-            var middleware = new RoutingMiddleware(next);
+            var routeRegistry = app.ApplicationServices.GetRequiredService<IRouteRegistry>();
+            var middleware = new RoutingMiddleware(next, routeRegistry);
             return middleware.InvokeAsync;
         });
     }

@@ -114,15 +114,17 @@ public class WebApplicationTests
     }
 
     [Fact]
-    public void UseRouting_ThrowsNotImplementedException()
+    public void UseRouting_AddsRoutingMiddleware()
     {
         // Arrange
         var builder = WebApplicationBuilder.CreateBuilder();
         var app = builder.Build();
 
-        // Act & Assert
-        var exception = Assert.Throws<NotImplementedException>(() => app.UseRouting());
-        Assert.Contains("Phase 5", exception.Message);
+        // Act
+        var result = app.UseRouting();
+
+        // Assert - Routing is now implemented in Phase 6
+        Assert.Same(app, result);
     }
 
     [Fact(Skip = "Routing framework is not yet implemented (Phase 6)")]

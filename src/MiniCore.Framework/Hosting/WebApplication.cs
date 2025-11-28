@@ -2,6 +2,8 @@ using MiniCore.Framework.DependencyInjection;
 using MiniCore.Framework.Http;
 using MiniCore.Framework.Http.Abstractions;
 using MiniCore.Framework.Http.Extensions;
+using MiniCore.Framework.Routing;
+using MiniCore.Framework.Routing.Abstractions;
 
 namespace MiniCore.Framework.Hosting;
 
@@ -71,20 +73,26 @@ public class WebApplication
     /// Adds endpoints for controller actions to the <see cref="WebApplication"/> request execution pipeline.
     /// </summary>
     /// <returns>The <see cref="WebApplication"/>.</returns>
-    /// <exception cref="NotImplementedException">Thrown because routing framework is not yet implemented (Phase 6).</exception>
     public WebApplication MapControllers()
     {
-        throw new NotImplementedException("Routing framework is not yet implemented. This will be available in Phase 6.");
+        // Get controller mapper from services
+        var mapper = Services.GetService<ControllerMapper>();
+        if (mapper != null)
+        {
+            mapper.MapControllers();
+        }
+        return this;
     }
 
     /// <summary>
     /// Adds endpoints for Razor Pages to the <see cref="WebApplication"/> request execution pipeline.
     /// </summary>
     /// <returns>The <see cref="WebApplication"/>.</returns>
-    /// <exception cref="NotImplementedException">Thrown because routing framework is not yet implemented (Phase 6).</exception>
     public WebApplication MapRazorPages()
     {
-        throw new NotImplementedException("Routing framework is not yet implemented. This will be available in Phase 6.");
+        // Phase 6: Razor Pages support is not yet implemented
+        // This is a placeholder for future implementation
+        return this;
     }
 
     /// <summary>
@@ -94,10 +102,14 @@ public class WebApplication
     /// <param name="controller">The controller name.</param>
     /// <param name="pattern">The route pattern.</param>
     /// <returns>The <see cref="WebApplication"/>.</returns>
-    /// <exception cref="NotImplementedException">Thrown because routing framework is not yet implemented (Phase 6).</exception>
     public WebApplication MapFallbackToController(string action, string controller, string? pattern = null)
     {
-        throw new NotImplementedException("Routing framework is not yet implemented. This will be available in Phase 6.");
+        var mapper = Services.GetService<ControllerMapper>();
+        if (mapper != null)
+        {
+            mapper.MapFallbackToController(action, controller, pattern);
+        }
+        return this;
     }
 
     /// <summary>
