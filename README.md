@@ -109,13 +109,23 @@ Build a minimal equivalent of `IHost` and `HostBuilder`, plus `WebApplicationBui
 - ✅ Composes DI + Config + Logging
 - ✅ Background service lifecycle management
 
-### Phase 5: Middleware Pipeline
+### Phase 5: Middleware Pipeline ✅
 Recreate `Use`, `UseMiddleware`, and request-delegate chaining.
 
+**Status:** ✅ Complete  
+**See:** [Chapter 5 Documentation](docs/Chapter5/README.md)
+
 **Key Features:**
-- `RequestDelegate` delegate pattern
-- Order-preserving execution
-- Built-in middlewares: Exception handling, Static file serving, Logging, Routing
+- ✅ `RequestDelegate` delegate pattern (`Task Invoke(IHttpContext context)`)
+- ✅ `IApplicationBuilder` interface and `ApplicationBuilder` implementation
+- ✅ Order-preserving middleware execution
+- ✅ Built-in middlewares:
+  - ✅ Exception handling (`UseDeveloperExceptionPage`)
+  - ✅ Static file serving (`UseStaticFiles`)
+  - ✅ Request/response logging (`UseRequestLogging`)
+  - ✅ Routing middleware stub (`UseRouting` - full implementation in Phase 6)
+- ✅ HTTP abstractions (`IHttpContext`, `IHttpRequest`, `IHttpResponse`)
+- ✅ `WebApplication` integration with middleware pipeline
 
 ### Phase 6: Routing Framework
 Implement a lightweight router.
@@ -173,9 +183,12 @@ MiniCore/
 │       ├── Configuration/          # ✅ Phase 2 Complete
 │       ├── Logging/                 # ✅ Phase 3 Complete
 │       ├── Hosting/                 # ✅ Phase 4 Complete
+│       ├── Http/                    # ✅ Phase 5 Complete
+│       │   ├── Abstractions/        # HTTP interfaces
+│       │   ├── Middleware/          # Built-in middlewares
+│       │   └── Extensions/          # Extension methods
 │       ├── Server/                  # Phase 7
 │       ├── Routing/                 # Phase 6
-│       ├── Middleware/              # Phase 5
 │       └── Background/              # Phase 10
 ├── docs/
 │   ├── Chapter0/                   # Phase 0 documentation ✅
@@ -183,6 +196,7 @@ MiniCore/
 │   ├── Chapter2/                   # Phase 2 documentation ✅
 │   ├── Chapter3/                   # Phase 3 documentation ✅
 │   ├── Chapter4/                   # Phase 4 documentation ✅
+│   ├── Chapter5/                   # Phase 5 documentation ✅
 │   └── SPEC.md                    # Detailed specification
 └── README.md                      # This file
 ```
@@ -238,6 +252,7 @@ dotnet test src/MiniCore.Web.Tests/MiniCore.Web.Tests.csproj
 - **[Chapter 2: Configuration Framework](docs/Chapter2/README.md)** - Phase 2 implementation details ✅
 - **[Chapter 3: Logging Framework](docs/Chapter3/README.md)** - Phase 3 implementation details ✅
 - **[Chapter 4: Host Abstraction](docs/Chapter4/README.md)** - Phase 4 implementation details ✅
+- **[Chapter 5: Middleware Pipeline](docs/Chapter5/README.md)** - Phase 5 implementation details ✅
 
 ## 🎯 Expected Learning Outcomes
 
@@ -258,10 +273,14 @@ dotnet test src/MiniCore.Web.Tests/MiniCore.Web.Tests.csproj
 | `IHostBuilder` | Host configuration | `ConfigureServices`, `Build()` |
 | `IWebHostEnvironment` | Web environment | `ContentRootPath`, `EnvironmentName` |
 | `WebApplicationBuilder` | Web app builder | `CreateBuilder()`, `Build()` |
-| `WebApplication` | Web application | `Run()`, middleware/routing stubs |
+| `WebApplication` | Web application | `Run()`, middleware pipeline |
+| `IHttpContext` | HTTP context | Request, Response, Items, RequestServices |
+| `IHttpRequest` | HTTP request | Method, Path, Headers, Body |
+| `IHttpResponse` | HTTP response | StatusCode, Headers, Body |
+| `IApplicationBuilder` | Middleware builder | `Use()`, `Build()` |
+| `RequestDelegate` | Middleware delegate | `Task Invoke(IHttpContext)` |
 | `IServer` | HTTP Server | `StartAsync`, `StopAsync` |
 | `IHostedService` | Background tasks | `StartAsync`, `StopAsync` |
-| `RequestDelegate` | Middleware link | Async invocation |
 
 ## 📖 Chapter Summaries
 
@@ -348,11 +367,33 @@ Phase 4 successfully implemented a minimal Host abstraction to replace `Microsof
 - ✅ Background service lifecycle management (`IHostedService`)
 - ✅ `IWebHostEnvironment` interface for environment information
 - ✅ `WebApplicationBuilder` class for building web applications
-- ✅ `WebApplication` class with stub methods for middleware/routing/server (Phases 5-7)
+- ✅ `WebApplication` class with middleware pipeline (Phase 5), routing/server stubs (Phases 6-7)
 - ✅ Comprehensive test coverage (35 tests: 28 passing, 7 skipped for unimplemented features)
-- ✅ Ready for integration when middleware, routing, and HTTP server are implemented
+- ✅ Middleware pipeline integrated (Phase 5), ready for routing (Phase 6) and HTTP server (Phase 7)
 
 **Read More:** [Chapter 4 Documentation](docs/Chapter4/README.md)
+
+### [Chapter 5: Middleware Pipeline](docs/Chapter5/README.md) ✅
+
+Phase 5 successfully implemented a minimal Middleware Pipeline to replace `Microsoft.AspNetCore.Builder`. This provides the core request/response processing pipeline that allows middleware components to be composed in a chain, processing HTTP requests and responses in order.
+
+**Status:** ✅ Complete
+
+**Key Accomplishments:**
+- ✅ Implemented HTTP abstractions (`IHttpContext`, `IHttpRequest`, `IHttpResponse`)
+- ✅ `RequestDelegate` delegate type for middleware components
+- ✅ `IApplicationBuilder` interface and `ApplicationBuilder` implementation
+- ✅ Order-preserving middleware execution pipeline
+- ✅ Built-in middlewares:
+  - ✅ Exception handling middleware (`UseDeveloperExceptionPage`)
+  - ✅ Static file serving middleware (`UseStaticFiles`)
+  - ✅ Request/response logging middleware
+  - ✅ Routing middleware stub (`UseRouting` - full implementation in Phase 6)
+- ✅ `WebApplication` integration with middleware pipeline
+- ✅ Comprehensive test coverage (13 tests, all passing)
+- ✅ Ready for Phase 6 (Routing Framework) and Phase 7 (HTTP Server)
+
+**Read More:** [Chapter 5 Documentation](docs/Chapter5/README.md)
 
 ---
 
@@ -366,5 +407,5 @@ This is an educational project. Feel free to explore, learn, and adapt the code 
 
 ---
 
-**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Next: Phase 5 - Middleware Pipeline
+**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Phase 5 Complete ✅ | Next: Phase 6 - Routing Framework
 
