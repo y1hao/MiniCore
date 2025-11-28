@@ -1,4 +1,7 @@
 using MiniCore.Framework.DependencyInjection;
+using MiniCore.Framework.Http;
+using MiniCore.Framework.Http.Abstractions;
+using MiniCore.Framework.Http.Extensions;
 
 namespace MiniCore.Framework.Hosting;
 
@@ -9,6 +12,8 @@ public class WebApplication
 {
     private readonly IHost _host;
     private readonly IWebHostEnvironment _environment;
+    private readonly ApplicationBuilder _applicationBuilder;
+    private RequestDelegate? _requestDelegate;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WebApplication"/> class.
@@ -19,6 +24,7 @@ public class WebApplication
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
         _environment = environment ?? throw new ArgumentNullException(nameof(environment));
+        _applicationBuilder = new ApplicationBuilder(_host.Services);
     }
 
     /// <summary>
@@ -35,30 +41,30 @@ public class WebApplication
     /// Adds a middleware to the application pipeline that will catch exceptions, log them, and re-execute the request in an alternate pipeline.
     /// </summary>
     /// <returns>The <see cref="WebApplication"/>.</returns>
-    /// <exception cref="NotImplementedException">Thrown because middleware pipeline is not yet implemented (Phase 5).</exception>
     public WebApplication UseDeveloperExceptionPage()
     {
-        throw new NotImplementedException("Middleware pipeline is not yet implemented. This will be available in Phase 5.");
+        _applicationBuilder.UseDeveloperExceptionPage();
+        return this;
     }
 
     /// <summary>
     /// Enables static file serving for the current request path.
     /// </summary>
     /// <returns>The <see cref="WebApplication"/>.</returns>
-    /// <exception cref="NotImplementedException">Thrown because middleware pipeline is not yet implemented (Phase 5).</exception>
     public WebApplication UseStaticFiles()
     {
-        throw new NotImplementedException("Middleware pipeline is not yet implemented. This will be available in Phase 5.");
+        _applicationBuilder.UseStaticFiles();
+        return this;
     }
 
     /// <summary>
     /// Adds routing middleware to the application pipeline.
     /// </summary>
     /// <returns>The <see cref="WebApplication"/>.</returns>
-    /// <exception cref="NotImplementedException">Thrown because middleware pipeline is not yet implemented (Phase 5).</exception>
     public WebApplication UseRouting()
     {
-        throw new NotImplementedException("Middleware pipeline is not yet implemented. This will be available in Phase 5.");
+        _applicationBuilder.UseRouting();
+        return this;
     }
 
     /// <summary>
@@ -95,11 +101,27 @@ public class WebApplication
     }
 
     /// <summary>
+    /// Gets the built request delegate pipeline.
+    /// </summary>
+    /// <returns>The request delegate.</returns>
+    internal RequestDelegate BuildRequestDelegate()
+    {
+        if (_requestDelegate == null)
+        {
+            _requestDelegate = _applicationBuilder.Build();
+        }
+        return _requestDelegate;
+    }
+
+    /// <summary>
     /// Runs the application and blocks the calling thread until host shutdown.
     /// </summary>
     /// <exception cref="NotImplementedException">Thrown because HTTP server is not yet implemented (Phase 7).</exception>
     public void Run()
     {
+        // Build the request delegate pipeline
+        BuildRequestDelegate();
+
         // Start the host (this will start background services)
         _host.StartAsync().GetAwaiter().GetResult();
 
