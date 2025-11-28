@@ -222,7 +222,30 @@ Using `HttpListener` keeps it simple while demonstrating the server abstraction 
 
 ---
 
-### **Phase 8 — Mini ORM / Data Integration**
+### **Phase 8 — MVC Framework**
+
+**Goal:** Replace Microsoft.AspNetCore.Mvc with our own MVC implementation.
+
+**Key Features**
+
+* `IController` interface and `Controller` base class
+* `IActionResult` interface and implementations (Ok, BadRequest, NotFound, etc.)
+* Model binding from route parameters, query strings, and request body
+* Action method invocation with parameter binding
+* Controller discovery and action method discovery
+* Integration with routing framework
+* Support for `[FromBody]`, `[FromQuery]`, `[FromRoute]` attributes
+
+**Reasoning:**
+Controllers are the primary way applications handle HTTP requests in ASP.NET Core.
+Implementing our own MVC framework removes the dependency on Microsoft's MVC and allows
+controllers to work directly with our HttpContext without bridging layers.
+This phase moves controller-related functionality from the routing framework (Phase 6)
+into a dedicated MVC framework.
+
+---
+
+### **Phase 9 — Mini ORM / Data Integration**
 
 **Goal:** Replace EF Core with a lightweight reflection-based ORM.
 
@@ -239,7 +262,7 @@ The goal is conceptual understanding of data mapping, not LINQ translation.
 
 ---
 
-### **Phase 9 — Frontend Templating**
+### **Phase 10 — Frontend Templating**
 
 **Goal:** Replace Razor with a simple templating engine.
 
@@ -255,7 +278,7 @@ Razor’s Roslyn integration is complex; a lightweight static template system de
 
 ---
 
-### **Phase 10 — Background Services**
+### **Phase 11 — Background Services**
 
 **Goal:** Implement a minimal background service system to mirror `IHostedService` and `BackgroundService`.
 
@@ -285,6 +308,8 @@ In this project, it supports a **real, useful feature** of the baseline app: aut
 | `ILogger`          | Logging              | Levels, message formatting |
 | `IHost`            | Composition root     | Lifecycle control          |
 | `IServer`          | HTTP Server          | `StartAsync`, `StopAsync`  |
+| `IController`      | MVC Controller       | Action method execution    |
+| `IActionResult`    | MVC Result           | Result execution           |
 | `IHostedService`   | Background tasks     | `StartAsync`, `StopAsync`  |
 | `RequestDelegate`  | Middleware link      | Async invocation           |
 

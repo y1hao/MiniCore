@@ -2,6 +2,9 @@ using MiniCore.Framework.Configuration;
 using MiniCore.Framework.Configuration.Abstractions;
 using MiniCore.Framework.DependencyInjection;
 using MiniCore.Framework.Logging;
+using MiniCore.Framework.Mvc;
+using MiniCore.Framework.Mvc.Abstractions;
+using MiniCore.Framework.Mvc.ModelBinding;
 using MiniCore.Framework.Routing;
 using MiniCore.Framework.Routing.Abstractions;
 
@@ -121,10 +124,16 @@ public class WebApplicationBuilder
             var matcher = serviceProvider.GetRequiredService<IRouteMatcher>();
             return new RouteRegistry(matcher);
         });
+
+        // Register MVC services
+        _services.AddSingleton<IControllerDiscovery, ControllerDiscovery>();
+        _services.AddSingleton<IModelBinder, DefaultModelBinder>();
         _services.AddSingleton<ControllerMapper>(serviceProvider =>
         {
             var routeRegistry = serviceProvider.GetRequiredService<IRouteRegistry>();
-            return new ControllerMapper(routeRegistry, serviceProvider);
+            var controllerDiscovery = serviceProvider.GetRequiredService<IControllerDiscovery>();
+            var modelBinder = serviceProvider.GetRequiredService<IModelBinder>();
+            return new ControllerMapper(routeRegistry, serviceProvider, controllerDiscovery, modelBinder);
         });
 
         // Configure host builder with our services

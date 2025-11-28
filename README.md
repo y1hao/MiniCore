@@ -144,16 +144,30 @@ Implement a lightweight router.
 - ✅ Integration with middleware pipeline
 - ✅ `MapFallbackToController()` for fallback routes
 
-### Phase 7: HTTP Server (HttpListener Backend)
+### Phase 7: HTTP Server (HttpListener Backend) ✅
 Replace Kestrel with an HttpListener-based implementation.
 
-**Key Features:**
-- Implement `IServer` interface
-- Wrap `HttpListener` for HTTP/1.1
-- Translate incoming requests into `HttpContext`
-- Invoke middleware pipeline
+**Status:** ✅ Complete  
+**See:** [Chapter 7 Documentation](docs/Chapter7/README.md)
 
-### Phase 8: Mini ORM / Data Integration
+**Key Features:**
+- ✅ Implement `IServer` interface
+- ✅ Wrap `HttpListener` for HTTP/1.1
+- ✅ Translate incoming requests into `HttpContext`
+- ✅ Invoke middleware pipeline
+
+### Phase 8: MVC Framework
+Replace Microsoft.AspNetCore.Mvc with our own MVC implementation.
+
+**Key Features:**
+- `IController` interface and `Controller` base class
+- `IActionResult` interface and implementations (Ok, BadRequest, NotFound, etc.)
+- Model binding from route parameters, query strings, and request body
+- Action method invocation with parameter binding
+- Controller discovery and action method discovery
+- Support for `[FromBody]`, `[FromQuery]`, `[FromRoute]` attributes
+
+### Phase 9: Mini ORM / Data Integration
 Replace EF Core with a lightweight reflection-based ORM.
 
 **Key Features:**
@@ -161,7 +175,7 @@ Replace EF Core with a lightweight reflection-based ORM.
 - Map rows ↔ objects via reflection
 - Simple query builder (select/insert/update/delete)
 
-### Phase 9: Frontend Templating
+### Phase 10: Frontend Templating
 Replace Razor with a simple templating engine.
 
 **Key Features:**
@@ -169,13 +183,15 @@ Replace Razor with a simple templating engine.
 - Replace `{{variable}}` placeholders
 - Optional loops/conditionals
 
-### Phase 10: Background Services
+### Phase 11: Background Services ✅
 Implement a minimal background service system to mirror `IHostedService` and `BackgroundService`.
 
+**Status:** ✅ Complete (implemented in Phase 4)
+
 **Key Features:**
-- `IHostedService` interface
-- Host-managed lifecycle integration
-- Example: `LinkCleanupService` runs hourly
+- ✅ `IHostedService` interface
+- ✅ Host-managed lifecycle integration
+- ✅ Example: `LinkCleanupService` runs hourly
 
 ## 📁 Project Structure
 
@@ -195,12 +211,17 @@ MiniCore/
 │       │   ├── Abstractions/        # HTTP interfaces
 │       │   ├── Middleware/          # Built-in middlewares
 │       │   └── Extensions/          # Extension methods
-│       ├── Server/                  # Phase 7
+│       ├── Server/                  # ✅ Phase 7 Complete
 │       ├── Routing/                 # ✅ Phase 6 Complete
 │       │   ├── Abstractions/        # Routing interfaces
 │       │   ├── Attributes/          # Routing attributes
 │       │   └── Extensions/          # Extension methods
-│       └── Background/              # Phase 10
+│       ├── Mvc/                     # Phase 8
+│       │   ├── Abstractions/        # MVC interfaces
+│       │   ├── Controllers/         # Controller base classes
+│       │   ├── Results/             # ActionResult implementations
+│       │   └── ModelBinding/        # Model binding
+│       └── Background/              # ✅ Phase 11 Complete (in Hosting)
 ├── docs/
 │   ├── Chapter0/                   # Phase 0 documentation ✅
 │   ├── Chapter1/                   # Phase 1 documentation ✅
@@ -209,6 +230,7 @@ MiniCore/
 │   ├── Chapter4/                   # Phase 4 documentation ✅
 │   ├── Chapter5/                   # Phase 5 documentation ✅
 │   ├── Chapter6/                   # Phase 6 documentation ✅
+│   ├── Chapter7/                   # Phase 7 documentation ✅
 │   └── SPEC.md                    # Detailed specification
 └── README.md                      # This file
 ```
@@ -441,5 +463,5 @@ This is an educational project. Feel free to explore, learn, and adapt the code 
 
 ---
 
-**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Phase 5 Complete ✅ | Phase 6 Complete ✅ | Next: Phase 7 - HTTP Server
+**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Phase 5 Complete ✅ | Phase 6 Complete ✅ | Phase 7 Complete ✅ | Next: Phase 8 - MVC Framework
 

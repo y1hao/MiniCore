@@ -1,0 +1,111 @@
+using System.Reflection;
+using MiniCore.Framework.Mvc.Abstractions;
+using MiniCore.Framework.Routing.Attributes;
+
+namespace MiniCore.Framework.Mvc;
+
+/// <summary>
+/// Discovers controllers and their action methods.
+/// </summary>
+public class ControllerDiscovery : IControllerDiscovery
+{
+    /// <inheritdoc />
+    public IEnumerable<ControllerInfo> DiscoverControllers(params Assembly[] assemblies)
+    {
+        if (assemblies == null || assemblies.Length == 0)
+        {
+            assemblies = new[] { Assembly.GetCallingAssembly() };
+        }
+
+        foreach (var assembly in assemblies)
+        {
+            var controllerTypes = assembly.GetTypes()
+                .Where(t => t.IsClass &&
+                           !t.IsAbstract &&
+                           (t.Name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase) ||
+                            t.GetCustomAttribute<ControllerAttribute>() != null) &&
+                           (typeof(Abstractions.IController).IsAssignableFrom(t) ||
+                            typeof(Controllers.ControllerBase).IsAssignableFrom(t)));
+
+            foreach (var controllerType in controllerTypes)
+            {
+                var routeAttr = controllerType.GetCustomAttribute<RouteAttribute>();
+                yield return new ControllerInfo
+                {
+                    ControllerType = controllerType,
+                    RoutePrefix = GetTemplate(routeAttr)
+                };
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public IEnumerable<ActionMethodInfo> GetActionMethods(Type controllerType)
+    {
+        var methods = controllerType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(m => !m.IsSpecialName &&
+                       m.GetCustomAttribute<NonActionAttribute>() == null);
+
+        foreach (var method in methods)
+        {
+            var httpGetAttr = method.GetCustomAttribute<HttpGetAttribute>();
+            var httpPostAttr = method.GetCustomAttribute<HttpPostAttribute>();
+            var httpPutAttr = method.GetCustomAttribute<HttpPutAttribute>();
+            var httpDeleteAttr = method.GetCustomAttribute<HttpDeleteAttribute>();
+            var httpPatchAttr = method.GetCustomAttribute<HttpPatchAttribute>();
+            var routeAttr = method.GetCustomAttribute<RouteAttribute>();
+
+            var httpMethods = new List<(string Method, string? Template)>();
+
+            if (httpGetAttr != null)
+            {
+                httpMethods.Add((httpGetAttr.HttpMethod, httpGetAttr.Template));
+            }
+            if (httpPostAttr != null)
+            {
+                httpMethods.Add((httpPostAttr.HttpMethod, httpPostAttr.Template));
+            }
+            if (httpPutAttr != null)
+            {
+                httpMethods.Add((httpPutAttr.HttpMethod, httpPutAttr.Template));
+            }
+            if (httpDeleteAttr != null)
+            {
+                httpMethods.Add((httpDeleteAttr.HttpMethod, httpDeleteAttr.Template));
+            }
+            if (httpPatchAttr != null)
+            {
+                httpMethods.Add((httpPatchAttr.HttpMethod, httpPatchAttr.Template));
+            }
+
+            // If no HTTP method attribute, default to GET
+            if (httpMethods.Count == 0)
+            {
+                httpMethods.Add(("GET", routeAttr?.Template));
+            }
+            else if (routeAttr != null)
+            {
+                // Apply route template to all HTTP methods
+                for (int i = 0; i < httpMethods.Count; i++)
+                {
+                    httpMethods[i] = (httpMethods[i].Method, routeAttr.Template);
+                }
+            }
+
+            if (httpMethods.Count > 0)
+            {
+                yield return new ActionMethodInfo
+                {
+                    Method = method,
+                    HttpMethods = httpMethods
+                };
+            }
+        }
+    }
+
+    private static string? GetTemplate(RouteAttribute? attribute)
+    {
+        return attribute?.Template;
+    }
+}
+
