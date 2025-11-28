@@ -105,7 +105,7 @@ Build a minimal equivalent of `IHost` and `HostBuilder`, plus `WebApplicationBui
 - ✅ Registers `IHostApplicationLifetime` for graceful start/stop
 - ✅ `IWebHostEnvironment` interface for environment information
 - ✅ `WebApplicationBuilder` class for building web applications
-- ✅ `WebApplication` class with stub methods for middleware/routing/server (Phases 5-7)
+- ✅ `WebApplication` class with middleware pipeline (Phase 5), routing (Phase 6), server stub (Phase 7)
 - ✅ Composes DI + Config + Logging
 - ✅ Background service lifecycle management
 
@@ -123,18 +123,26 @@ Recreate `Use`, `UseMiddleware`, and request-delegate chaining.
   - ✅ Exception handling (`UseDeveloperExceptionPage`)
   - ✅ Static file serving (`UseStaticFiles`)
   - ✅ Request/response logging (`UseRequestLogging`)
-  - ✅ Routing middleware stub (`UseRouting` - full implementation in Phase 6)
+  - ✅ Routing middleware (`UseRouting` - Phase 6 complete)
 - ✅ HTTP abstractions (`IHttpContext`, `IHttpRequest`, `IHttpResponse`)
 - ✅ `WebApplication` integration with middleware pipeline
 
-### Phase 6: Routing Framework
+### Phase 6: Routing Framework ✅
 Implement a lightweight router.
 
+**Status:** ✅ Complete  
+**See:** [Chapter 6 Documentation](docs/Chapter6/README.md)
+
 **Key Features:**
-- Route registration: `Map("GET", "/api/links/{id}", handler)`
-- Path parameter extraction
-- Verb matching (GET/POST/PUT/DELETE)
-- Route fallback (404)
+- ✅ Route pattern matching with parameter extraction (`{param}`, `{*path}`)
+- ✅ Route registration: `Map("GET", "/api/links/{id}", handler)`
+- ✅ HTTP verb matching (GET/POST/PUT/DELETE/PATCH)
+- ✅ Route fallback support
+- ✅ Controller discovery and routing (`MapControllers()`)
+- ✅ Route parameter binding from route data and query strings
+- ✅ Custom routing attributes (Route, HttpGet, HttpPost, HttpDelete, etc.)
+- ✅ Integration with middleware pipeline
+- ✅ `MapFallbackToController()` for fallback routes
 
 ### Phase 7: HTTP Server (HttpListener Backend)
 Replace Kestrel with an HttpListener-based implementation.
@@ -188,7 +196,10 @@ MiniCore/
 │       │   ├── Middleware/          # Built-in middlewares
 │       │   └── Extensions/          # Extension methods
 │       ├── Server/                  # Phase 7
-│       ├── Routing/                 # Phase 6
+│       ├── Routing/                 # ✅ Phase 6 Complete
+│       │   ├── Abstractions/        # Routing interfaces
+│       │   ├── Attributes/          # Routing attributes
+│       │   └── Extensions/          # Extension methods
 │       └── Background/              # Phase 10
 ├── docs/
 │   ├── Chapter0/                   # Phase 0 documentation ✅
@@ -197,6 +208,7 @@ MiniCore/
 │   ├── Chapter3/                   # Phase 3 documentation ✅
 │   ├── Chapter4/                   # Phase 4 documentation ✅
 │   ├── Chapter5/                   # Phase 5 documentation ✅
+│   ├── Chapter6/                   # Phase 6 documentation ✅
 │   └── SPEC.md                    # Detailed specification
 └── README.md                      # This file
 ```
@@ -253,6 +265,7 @@ dotnet test src/MiniCore.Web.Tests/MiniCore.Web.Tests.csproj
 - **[Chapter 3: Logging Framework](docs/Chapter3/README.md)** - Phase 3 implementation details ✅
 - **[Chapter 4: Host Abstraction](docs/Chapter4/README.md)** - Phase 4 implementation details ✅
 - **[Chapter 5: Middleware Pipeline](docs/Chapter5/README.md)** - Phase 5 implementation details ✅
+- **[Chapter 6: Routing Framework](docs/Chapter6/README.md)** - Phase 6 implementation details ✅
 
 ## 🎯 Expected Learning Outcomes
 
@@ -388,12 +401,33 @@ Phase 5 successfully implemented a minimal Middleware Pipeline to replace `Micro
   - ✅ Exception handling middleware (`UseDeveloperExceptionPage`)
   - ✅ Static file serving middleware (`UseStaticFiles`)
   - ✅ Request/response logging middleware
-  - ✅ Routing middleware stub (`UseRouting` - full implementation in Phase 6)
+  - ✅ Routing middleware (`UseRouting` - Phase 6 complete)
 - ✅ `WebApplication` integration with middleware pipeline
 - ✅ Comprehensive test coverage (13 tests, all passing)
-- ✅ Ready for Phase 6 (Routing Framework) and Phase 7 (HTTP Server)
+- ✅ Routing framework integrated (Phase 6), ready for Phase 7 (HTTP Server)
 
 **Read More:** [Chapter 5 Documentation](docs/Chapter5/README.md)
+
+### [Chapter 6: Routing Framework](docs/Chapter6/README.md) ✅
+
+Phase 6 successfully implemented a minimal Routing Framework to replace `Microsoft.AspNetCore.Routing`. This provides route pattern matching, parameter extraction, and controller discovery capabilities.
+
+**Status:** ✅ Complete
+
+**Key Accomplishments:**
+- ✅ Route pattern matching with parameter extraction (`{param}`, `{*path}` patterns)
+- ✅ Route registry for storing and matching routes by HTTP method and path
+- ✅ Controller discovery using reflection (convention-based and attribute-based)
+- ✅ Custom routing attributes (Route, HttpGet, HttpPost, HttpDelete, HttpPut, HttpPatch, NonAction, Controller)
+- ✅ Route parameter binding from route data and query strings
+- ✅ Integration with middleware pipeline via `RoutingMiddleware`
+- ✅ `MapControllers()` and `MapFallbackToController()` methods
+- ✅ HttpContext route data storage
+- ✅ Comprehensive test coverage (14 tests, all passing)
+- ✅ All routing attributes are our own implementations (no Microsoft dependencies for attributes)
+- ✅ Ready for Phase 7 (HTTP Server)
+
+**Read More:** [Chapter 6 Documentation](docs/Chapter6/README.md)
 
 ---
 
@@ -407,5 +441,5 @@ This is an educational project. Feel free to explore, learn, and adapt the code 
 
 ---
 
-**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Phase 5 Complete ✅ | Next: Phase 6 - Routing Framework
+**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Phase 5 Complete ✅ | Phase 6 Complete ✅ | Next: Phase 7 - HTTP Server
 
