@@ -140,8 +140,12 @@ public class WebApplicationBuilder
         // Build the host
         var host = _hostBuilder.Build();
 
+        // Get configuration from host services
+        var configuration = host.Services.GetService<IConfiguration>() 
+            ?? throw new InvalidOperationException("Configuration is not registered in services.");
+
         // Create and return the web application
-        return new WebApplication(host, _environment);
+        return new WebApplication(host, _environment, configuration);
     }
 
     private void ConfigureDefaultConfiguration(string[]? args)

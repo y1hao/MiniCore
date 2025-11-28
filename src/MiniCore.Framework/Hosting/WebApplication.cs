@@ -1,9 +1,14 @@
+using MiniCore.Framework.Configuration.Abstractions;
 using MiniCore.Framework.DependencyInjection;
 using MiniCore.Framework.Http;
 using MiniCore.Framework.Http.Abstractions;
 using MiniCore.Framework.Http.Extensions;
+using MiniCore.Framework.Logging;
 using MiniCore.Framework.Routing;
 using MiniCore.Framework.Routing.Abstractions;
+using MiniCore.Framework.Server;
+using MiniCore.Framework.Server.Abstractions;
+using IServiceProvider = MiniCore.Framework.DependencyInjection.IServiceProvider;
 
 namespace MiniCore.Framework.Hosting;
 
@@ -15,17 +20,21 @@ public class WebApplication
     private readonly IHost _host;
     private readonly IWebHostEnvironment _environment;
     private readonly ApplicationBuilder _applicationBuilder;
+    private readonly IConfiguration _configuration;
     private RequestDelegate? _requestDelegate;
+    private IServer? _server;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WebApplication"/> class.
     /// </summary>
     /// <param name="host">The host.</param>
     /// <param name="environment">The web host environment.</param>
-    internal WebApplication(IHost host, IWebHostEnvironment environment)
+    /// <param name="configuration">The configuration.</param>
+    internal WebApplication(IHost host, IWebHostEnvironment environment, IConfiguration configuration)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
         _environment = environment ?? throw new ArgumentNullException(nameof(environment));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _applicationBuilder = new ApplicationBuilder(_host.Services);
     }
 
@@ -128,17 +137,78 @@ public class WebApplication
     /// <summary>
     /// Runs the application and blocks the calling thread until host shutdown.
     /// </summary>
-    /// <exception cref="NotImplementedException">Thrown because HTTP server is not yet implemented (Phase 7).</exception>
     public void Run()
     {
+        RunAsync().GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Runs the application and returns a task that completes on shutdown.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public async Task RunAsync()
+    {
         // Build the request delegate pipeline
-        BuildRequestDelegate();
+        var requestDelegate = BuildRequestDelegate();
+
+        // Get URLs from configuration
+        var urls = GetUrls();
+
+        // Get logger
+        var loggerFactory = _host.Services.GetService<ILoggerFactory>();
+        var logger = loggerFactory?.CreateLogger<HttpListenerServer>();
+
+        // Create and start the server
+        // Explicitly use DependencyInjection.IServiceProvider to avoid type ambiguity
+        DependencyInjection.IServiceProvider serviceProvider = _host.Services;
+        _server = new HttpListenerServer(urls, requestDelegate, serviceProvider, logger);
+        await _server.StartAsync().ConfigureAwait(false);
 
         // Start the host (this will start background services)
-        _host.StartAsync().GetAwaiter().GetResult();
+        await _host.StartAsync().ConfigureAwait(false);
 
-        // TODO: Phase 7 - Implement HTTP server that listens for requests and processes them through middleware pipeline
-        // For now, we'll throw an exception to indicate this isn't fully implemented
-        throw new NotImplementedException("HTTP server is not yet implemented. This will be available in Phase 7. The host has been started, but HTTP request handling is not yet available.");
+        // Wait for host shutdown
+        var lifetime = _host.Services.GetService<IHostApplicationLifetime>();
+        if (lifetime != null)
+        {
+            // Wait for shutdown signal
+            var tcs = new TaskCompletionSource();
+            lifetime.ApplicationStopping.Register(() => tcs.SetResult());
+            await tcs.Task.ConfigureAwait(false);
+        }
+        else
+        {
+            // Fallback: wait indefinitely (or until Ctrl+C)
+            await Task.Delay(Timeout.Infinite).ConfigureAwait(false);
+        }
+
+        // Stop the server
+        if (_server != null)
+        {
+            await _server.StopAsync().ConfigureAwait(false);
+        }
+
+        // Stop the host
+        await _host.StopAsync().ConfigureAwait(false);
+    }
+
+    private string[] GetUrls()
+    {
+        // Check configuration for URLs
+        var urls = _configuration["Urls"];
+        if (!string.IsNullOrEmpty(urls))
+        {
+            return urls.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        // Check ASPNETCORE_URLS environment variable
+        var envUrls = System.Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+        if (!string.IsNullOrEmpty(envUrls))
+        {
+            return envUrls.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        // Default URLs
+        return new[] { "http://localhost:5000", "https://localhost:5001" };
     }
 }
