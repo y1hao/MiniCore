@@ -1,29 +1,55 @@
 using Microsoft.EntityFrameworkCore;
+using MiniCore.Framework.Configuration.Abstractions;
+using MiniCore.Framework.DependencyInjection;
+using MiniCore.Framework.Logging;
+using MiniHostedService = MiniCore.Framework.Hosting.IHostedService;
 using MiniCore.Web.Data;
 
 namespace MiniCore.Web.Services;
 
-public class LinkCleanupService : BackgroundService
+public class LinkCleanupService : MiniHostedService
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<LinkCleanupService> _logger;
-    private readonly IConfiguration _configuration;
+    private readonly MiniCore.Framework.DependencyInjection.IServiceProvider _serviceProvider;
+    private readonly MiniCore.Framework.Logging.ILogger<LinkCleanupService> _logger;
+    private readonly MiniCore.Framework.Configuration.Abstractions.IConfiguration _configuration;
     private readonly TimeSpan _interval;
+    private CancellationTokenSource? _cancellationTokenSource;
+    private Task? _executingTask;
 
     public LinkCleanupService(
-        IServiceProvider serviceProvider,
-        ILogger<LinkCleanupService> logger,
-        IConfiguration configuration)
+        MiniCore.Framework.DependencyInjection.IServiceProvider serviceProvider,
+        MiniCore.Framework.Logging.ILogger<LinkCleanupService> logger,
+        MiniCore.Framework.Configuration.Abstractions.IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
         _configuration = configuration;
         
-        var intervalHours = _configuration.GetValue<int>("LinkCleanup:IntervalHours", 1);
+        var intervalHoursStr = _configuration["LinkCleanup:IntervalHours"];
+        var intervalHours = int.TryParse(intervalHoursStr, out var hours) ? hours : 1;
         _interval = TimeSpan.FromHours(intervalHours);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _executingTask = ExecuteAsync(_cancellationTokenSource.Token);
+        return Task.CompletedTask;
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        if (_executingTask == null)
+        {
+            return;
+        }
+
+        _cancellationTokenSource?.Cancel();
+        await Task.WhenAny(_executingTask, Task.Delay(Timeout.Infinite, cancellationToken));
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    private async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("LinkCleanupService started. Cleanup interval: {Interval}", _interval);
 
@@ -46,7 +72,14 @@ public class LinkCleanupService : BackgroundService
 
     public async Task CleanupExpiredLinks(CancellationToken cancellationToken)
     {
-        using var scope = _serviceProvider.CreateScope();
+        var scopeFactory = _serviceProvider.GetService<MiniCore.Framework.DependencyInjection.IServiceScopeFactory>();
+        if (scopeFactory == null)
+        {
+            _logger.LogError("IServiceScopeFactory is not available");
+            return;
+        }
+
+        using var scope = scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var expiredLinks = await context.ShortLinks

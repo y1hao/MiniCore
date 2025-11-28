@@ -188,6 +188,27 @@ public static class ConfigurationExtensions
         }
     }
 
+    /// <summary>
+    /// Gets the connection string with the specified name.
+    /// </summary>
+    /// <param name="configuration">The configuration.</param>
+    /// <param name="name">The name of the connection string.</param>
+    /// <returns>The connection string, or null if not found.</returns>
+    public static string? GetConnectionString(this IConfiguration configuration, string name)
+    {
+        if (configuration == null)
+        {
+            throw new ArgumentNullException(nameof(configuration));
+        }
+
+        if (name == null)
+        {
+            throw new ArgumentNullException(nameof(name));
+        }
+
+        return configuration[$"ConnectionStrings:{name}"];
+    }
+
     private static T ConvertValue<T>(string value)
     {
         if (string.IsNullOrEmpty(value))

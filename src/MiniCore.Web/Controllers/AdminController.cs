@@ -1,5 +1,7 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MiniCore.Framework.Mvc.Abstractions;
+using MiniCore.Framework.Mvc.Controllers;
+using MiniCore.Framework.Routing.Attributes;
 using MiniCore.Web.Data;
 using MiniCore.Web.Models;
 
@@ -25,7 +27,8 @@ public class AdminController(AppDbContext context) : Controller
             })
             .ToListAsync();
 
-        return View(links);
+        // TODO: Implement view rendering when templating is available
+        return NotFound();
     }
 }
 

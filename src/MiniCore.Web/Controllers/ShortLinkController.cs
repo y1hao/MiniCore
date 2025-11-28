@@ -1,5 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MiniCore.Framework.Configuration.Abstractions;
+using MiniCore.Framework.Logging;
+using MiniCore.Framework.Mvc.Abstractions;
+using MiniCore.Framework.Mvc.Controllers;
+using MiniCore.Framework.Mvc.ModelBinding;
+using MiniCore.Framework.Routing.Attributes;
 using MiniCore.Web.Data;
 using MiniCore.Web.Models;
 using System.Security.Cryptography;
@@ -7,16 +12,15 @@ using System.Text;
 
 namespace MiniCore.Web.Controllers;
 
-[ApiController]
 [Route("api/links")]
-public class ShortLinkController(AppDbContext context, ILogger<ShortLinkController> logger, IConfiguration configuration) : ControllerBase
+public class ShortLinkController(AppDbContext context, MiniCore.Framework.Logging.ILogger<ShortLinkController> logger, MiniCore.Framework.Configuration.Abstractions.IConfiguration configuration) : ControllerBase
 {
     private readonly AppDbContext _context = context;
-    private readonly ILogger<ShortLinkController> _logger = logger;
-    private readonly IConfiguration _configuration = configuration;
+    private readonly MiniCore.Framework.Logging.ILogger<ShortLinkController> _logger = logger;
+    private readonly MiniCore.Framework.Configuration.Abstractions.IConfiguration _configuration = configuration;
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ShortLinkDto>>> GetLinks([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    public async Task<IActionResult> GetLinks([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
         var links = await _context.ShortLinks
             .OrderByDescending(l => l.CreatedAt)
@@ -37,15 +41,11 @@ public class ShortLinkController(AppDbContext context, ILogger<ShortLinkControll
     }
 
     [HttpPost]
-    public async Task<ActionResult<ShortLinkDto>> CreateLink([FromBody] CreateShortLinkRequest request)
+    public async Task<IActionResult> CreateLink([FromBody] CreateShortLinkRequest request)
     {
-        if (!ModelState.IsValid)
+        if (request == null || string.IsNullOrWhiteSpace(request.OriginalUrl))
         {
-            var errors = ModelState
-                .Where(x => x.Value?.Errors.Count > 0)
-                .SelectMany(x => x.Value!.Errors.Select(e => e.ErrorMessage))
-                .ToList();
-            return BadRequest(new { error = string.Join(", ", errors), errors = ModelState });
+            return BadRequest(new { error = "OriginalUrl is required" });
         }
 
         if (!Uri.TryCreate(request.OriginalUrl, UriKind.Absolute, out var uri))
@@ -81,7 +81,8 @@ public class ShortLinkController(AppDbContext context, ILogger<ShortLinkControll
             // Check for uniqueness
             if (await _context.ShortLinks.AnyAsync(l => l.ShortCode == shortCode))
             {
-                return Conflict(new { error = $"Short code '{shortCode}' is already in use" });
+                Response.StatusCode = 409; // Conflict
+                return BadRequest(new { error = $"Short code '{shortCode}' is already in use" });
             }
         }
         else
@@ -96,7 +97,8 @@ public class ShortLinkController(AppDbContext context, ILogger<ShortLinkControll
             }
         }
 
-        var defaultExpirationDays = _configuration.GetValue<int>("LinkCleanup:DefaultExpirationDays", 30);
+        var defaultExpirationDaysStr = _configuration["LinkCleanup:DefaultExpirationDays"];
+        var defaultExpirationDays = int.TryParse(defaultExpirationDaysStr, out var days) ? days : 30;
         var expiresAt = request.ExpiresAt ?? DateTime.UtcNow.AddDays(defaultExpirationDays);
 
         var link = new ShortLink
@@ -122,7 +124,8 @@ public class ShortLinkController(AppDbContext context, ILogger<ShortLinkControll
             ShortUrl = $"{Request.Scheme}://{Request.Host}/{link.ShortCode}"
         };
 
-        return CreatedAtAction(nameof(GetLinks), new { id = link.Id }, dto);
+        var location = $"{Request.Scheme}://{Request.Host}/api/links/{link.Id}";
+        return Created(location, dto);
     }
 
     [HttpDelete("{id}")]

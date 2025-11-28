@@ -1,14 +1,18 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MiniCore.Framework.Logging;
+using MiniCore.Framework.Mvc.Abstractions;
+using MiniCore.Framework.Mvc.Controllers;
+using MiniCore.Framework.Routing.Attributes;
 using MiniCore.Web.Data;
 using MiniCore.Web.Models;
 
 namespace MiniCore.Web.Controllers;
 
-public class RedirectController(AppDbContext context, ILogger<RedirectController> logger) : ControllerBase
+[Route("{*path}")]
+public class RedirectController(AppDbContext context, MiniCore.Framework.Logging.ILogger<RedirectController> logger) : ControllerBase
 {
     private readonly AppDbContext _context = context;
-    private readonly ILogger<RedirectController> _logger = logger;
+    private readonly MiniCore.Framework.Logging.ILogger<RedirectController> _logger = logger;
 
     public async Task<IActionResult> RedirectToUrl(string path)
     {
