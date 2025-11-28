@@ -92,23 +92,49 @@ public class DefaultModelBinder : IModelBinder
 
     private static object? BindFromBody(IHttpRequest request, Type modelType)
     {
-        if (request.Body == null || request.Body.Length == 0)
+        if (request.Body == null)
         {
             return null;
         }
 
         try
         {
+            // Check if stream is readable and has content
+            if (!request.Body.CanRead)
+            {
+                return null;
+            }
+
+            // Save original position
+            var originalPosition = request.Body.Position;
             request.Body.Position = 0;
+
+            // Check if stream has content
+            if (request.Body.Length == 0 && request.Body.CanSeek)
+            {
+                request.Body.Position = originalPosition;
+                return null;
+            }
+
             using var reader = new StreamReader(request.Body, Encoding.UTF8, leaveOpen: true);
             var json = reader.ReadToEnd();
+            
+            // Restore original position
+            if (request.Body.CanSeek)
+            {
+                request.Body.Position = originalPosition;
+            }
             
             if (string.IsNullOrEmpty(json))
             {
                 return null;
             }
 
-            return JsonSerializer.Deserialize(json, modelType);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            return JsonSerializer.Deserialize(json, modelType, options);
         }
         catch
         {
