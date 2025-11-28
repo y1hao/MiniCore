@@ -18,6 +18,8 @@ We start from a working ASP.NET Core web application and progressively **replace
 - SQLite for persistence
 - Background service for cleaning up expired links
 
+**Current Status:** MiniCore.Web now uses MiniCore.Framework for hosting, MVC, configuration, logging, and dependency injection. The only remaining Microsoft dependency is Entity Framework Core (to be replaced in Phase 9).
+
 ## 🏗️ Architecture
 
 ```
@@ -156,16 +158,20 @@ Replace Kestrel with an HttpListener-based implementation.
 - ✅ Translate incoming requests into `HttpContext`
 - ✅ Invoke middleware pipeline
 
-### Phase 8: MVC Framework
+### Phase 8: MVC Framework ✅
 Replace Microsoft.AspNetCore.Mvc with our own MVC implementation.
 
+**Status:** ✅ Complete
+
 **Key Features:**
-- `IController` interface and `Controller` base class
-- `IActionResult` interface and implementations (Ok, BadRequest, NotFound, etc.)
-- Model binding from route parameters, query strings, and request body
-- Action method invocation with parameter binding
-- Controller discovery and action method discovery
-- Support for `[FromBody]`, `[FromQuery]`, `[FromRoute]` attributes
+- ✅ `IController` interface and `Controller` base class
+- ✅ `IActionResult` interface and implementations (Ok, BadRequest, NotFound, NoContent, Created, Redirect, etc.)
+- ✅ Model binding from route parameters, query strings, and request body
+- ✅ Action method invocation with parameter binding
+- ✅ Controller discovery and action method discovery
+- ✅ Support for `[FromBody]`, `[FromQuery]`, `[FromRoute]` attributes
+- ✅ Integration with routing framework
+- ✅ All controllers migrated to use MiniCore.Framework types
 
 ### Phase 9: Mini ORM / Data Integration
 Replace EF Core with a lightweight reflection-based ORM.
@@ -216,7 +222,7 @@ MiniCore/
 │       │   ├── Abstractions/        # Routing interfaces
 │       │   ├── Attributes/          # Routing attributes
 │       │   └── Extensions/          # Extension methods
-│       ├── Mvc/                     # Phase 8
+│       ├── Mvc/                     # ✅ Phase 8 Complete
 │       │   ├── Abstractions/        # MVC interfaces
 │       │   ├── Controllers/         # Controller base classes
 │       │   ├── Results/             # ActionResult implementations
@@ -251,7 +257,9 @@ MiniCore/
 
 ## 🚦 Getting Started
 
-### Running the Baseline Application
+### Running the Application
+
+**Note:** MiniCore.Web now uses MiniCore.Framework for hosting, MVC, configuration, logging, and dependency injection. The application runs entirely on our custom framework, with Entity Framework Core being the only remaining Microsoft dependency.
 
 ```bash
 # Navigate to the project
@@ -264,8 +272,8 @@ dotnet restore
 dotnet run
 
 # Access the admin interface
-# HTTP: http://localhost:5037/admin
-# HTTPS: https://localhost:7133/admin
+# HTTP: http://localhost:5000/admin
+# HTTPS: https://localhost:5001/admin
 ```
 
 ### Running Tests
@@ -288,6 +296,8 @@ dotnet test src/MiniCore.Web.Tests/MiniCore.Web.Tests.csproj
 - **[Chapter 4: Host Abstraction](docs/Chapter4/README.md)** - Phase 4 implementation details ✅
 - **[Chapter 5: Middleware Pipeline](docs/Chapter5/README.md)** - Phase 5 implementation details ✅
 - **[Chapter 6: Routing Framework](docs/Chapter6/README.md)** - Phase 6 implementation details ✅
+- **[Chapter 7: HTTP Server](docs/Chapter7/README.md)** - Phase 7 implementation details ✅
+- **[Chapter 8: MVC Framework](docs/Chapter8/README.md)** - Phase 8 implementation details ✅
 
 ## 🎯 Expected Learning Outcomes
 
@@ -316,6 +326,8 @@ dotnet test src/MiniCore.Web.Tests/MiniCore.Web.Tests.csproj
 | `RequestDelegate` | Middleware delegate | `Task Invoke(IHttpContext)` |
 | `IServer` | HTTP Server | `StartAsync`, `StopAsync` |
 | `IHostedService` | Background tasks | `StartAsync`, `StopAsync` |
+| `IController` | MVC Controller | `HttpContext` property |
+| `IActionResult` | MVC Result | `ExecuteResultAsync(ActionContext)` |
 
 ## 📖 Chapter Summaries
 
@@ -451,6 +463,26 @@ Phase 6 successfully implemented a minimal Routing Framework to replace `Microso
 
 **Read More:** [Chapter 6 Documentation](docs/Chapter6/README.md)
 
+### [Chapter 8: MVC Framework](docs/Chapter8/README.md) ✅
+
+Phase 8 successfully implemented a minimal MVC Framework to replace `Microsoft.AspNetCore.Mvc`. This provides controller base classes, action result types, and model binding capabilities.
+
+**Status:** ✅ Complete
+
+**Key Accomplishments:**
+- ✅ Implemented `IController` interface and `ControllerBase`/`Controller` base classes
+- ✅ `IActionResult` interface with implementations (Ok, BadRequest, NotFound, NoContent, Created, Redirect)
+- ✅ Model binding from route parameters, query strings, and request body
+- ✅ Action method invocation with automatic parameter binding
+- ✅ Controller discovery and action method discovery via reflection
+- ✅ Support for `[FromBody]`, `[FromQuery]`, `[FromRoute]` attributes
+- ✅ Integration with routing framework (Phase 6)
+- ✅ All controllers in MiniCore.Web migrated to use MiniCore.Framework types
+- ✅ Removed adapter files (ConfigurationAdapter, LoggingAdapter, ServiceProviderFactory)
+- ✅ MiniCore.Web now uses MiniCore.Framework exclusively (except EF Core)
+
+**Read More:** [Chapter 8 Documentation](docs/Chapter8/README.md)
+
 ---
 
 ## 📝 License
@@ -463,5 +495,7 @@ This is an educational project. Feel free to explore, learn, and adapt the code 
 
 ---
 
-**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Phase 5 Complete ✅ | Phase 6 Complete ✅ | Phase 7 Complete ✅ | Next: Phase 8 - MVC Framework
+**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Phase 5 Complete ✅ | Phase 6 Complete ✅ | Phase 7 Complete ✅ | Phase 8 Complete ✅ | Next: Phase 9 - Mini ORM / Data Integration
+
+**Migration Status:** MiniCore.Web now uses MiniCore.Framework for all core components. Only Entity Framework Core remains as a Microsoft dependency.
 
