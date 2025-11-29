@@ -71,9 +71,6 @@ app.UseRouting();
 // Map API controllers first (attribute routing takes precedence)
 app.MapControllers();
 
-// Map Razor Pages  
-app.MapRazorPages();
-
 // Map redirect endpoint as fallback - only matches if no other route matched
 // MapFallbackToController needs a pattern to capture the route parameter
 app.MapFallbackToController(
