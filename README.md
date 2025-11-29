@@ -18,7 +18,7 @@ We start from a working ASP.NET Core web application and progressively **replace
 - SQLite for persistence
 - Background service for cleaning up expired links
 
-**Current Status:** MiniCore.Web now uses MiniCore.Framework for hosting, MVC, configuration, logging, and dependency injection. The only remaining Microsoft dependency is Entity Framework Core (to be replaced in Phase 9).
+**Current Status:** MiniCore.Web now uses MiniCore.Framework for hosting, MVC, configuration, logging, dependency injection, data access (ORM), and templating. All Microsoft framework dependencies have been replaced with custom implementations.
 
 ## 🏗️ Architecture
 
@@ -173,21 +173,36 @@ Replace Microsoft.AspNetCore.Mvc with our own MVC implementation.
 - ✅ Integration with routing framework
 - ✅ All controllers migrated to use MiniCore.Framework types
 
-### Phase 9: Mini ORM / Data Integration
+### Phase 9: Mini ORM / Data Integration ✅
 Replace EF Core with a lightweight reflection-based ORM.
 
-**Key Features:**
-- CRUD via ADO.NET (`System.Data.SQLite`)
-- Map rows ↔ objects via reflection
-- Simple query builder (select/insert/update/delete)
+**Status:** ✅ Complete  
+**See:** [Chapter 9 Documentation](docs/Chapter9/README.md)
 
-### Phase 10: Frontend Templating
+**Key Features:**
+- ✅ `DbContext` and `DbSet<T>` classes
+- ✅ LINQ-like query support (Where, OrderBy, Skip, Take, Select)
+- ✅ CRUD operations (Add, Remove, SaveChangesAsync)
+- ✅ Async operations (ToListAsync, AnyAsync, FirstOrDefaultAsync, FindAsync)
+- ✅ Automatic schema creation (EnsureCreated)
+- ✅ Reflection-based object mapping (rows ↔ objects)
+- ✅ Query translation from LINQ expressions to SQL
+
+### Phase 10: Frontend Templating ✅
 Replace Razor with a simple templating engine.
 
+**Status:** ✅ Complete  
+**See:** [Chapter 10 Documentation](docs/Chapter10/README.md)
+
 **Key Features:**
-- Load `.html` templates from disk
-- Replace `{{variable}}` placeholders
-- Optional loops/conditionals
+- ✅ Load `.html` templates from disk
+- ✅ Variable substitution (`{{variable}}`, `{{model.Property}}`)
+- ✅ Conditionals (`{{#if}}...{{/if}}`)
+- ✅ Loops (`{{#each}}...{{/each}}`)
+- ✅ ViewData support
+- ✅ `IViewEngine` interface and `ViewEngine` implementation
+- ✅ `ViewResult` action result for MVC integration
+- ✅ `Controller.View()` method for view rendering
 
 ### Phase 11: Background Services ✅
 Implement a minimal background service system to mirror `IHostedService` and `BackgroundService`.
@@ -226,7 +241,14 @@ MiniCore/
 │       │   ├── Abstractions/        # MVC interfaces
 │       │   ├── Controllers/         # Controller base classes
 │       │   ├── Results/             # ActionResult implementations
-│       │   └── ModelBinding/        # Model binding
+│       │   ├── ModelBinding/        # Model binding
+│       │   └── Views/               # ✅ Phase 10 Complete
+│       │       ├── Abstractions/    # View engine interfaces
+│       │       └── TemplateEngine.cs # Template parser/renderer
+│       ├── Data/                    # ✅ Phase 9 Complete
+│       │   ├── Abstractions/        # Data interfaces
+│       │   ├── Extensions/          # Extension methods
+│       │   └── Internal/            # Query translation, ORM internals
 │       └── Background/              # ✅ Phase 11 Complete (in Hosting)
 ├── docs/
 │   ├── Chapter0/                   # Phase 0 documentation ✅
@@ -237,6 +259,9 @@ MiniCore/
 │   ├── Chapter5/                   # Phase 5 documentation ✅
 │   ├── Chapter6/                   # Phase 6 documentation ✅
 │   ├── Chapter7/                   # Phase 7 documentation ✅
+│   ├── Chapter8/                   # Phase 8 documentation ✅
+│   ├── Chapter9/                   # Phase 9 documentation ✅
+│   ├── Chapter10/                  # Phase 10 documentation ✅
 │   └── SPEC.md                    # Detailed specification
 └── README.md                      # This file
 ```
@@ -259,7 +284,7 @@ MiniCore/
 
 ### Running the Application
 
-**Note:** MiniCore.Web now uses MiniCore.Framework for hosting, MVC, configuration, logging, and dependency injection. The application runs entirely on our custom framework, with Entity Framework Core being the only remaining Microsoft dependency.
+**Note:** MiniCore.Web now runs entirely on MiniCore.Framework. All core components (hosting, MVC, configuration, logging, dependency injection, data access, and templating) are custom implementations. The application is fully self-contained.
 
 ```bash
 # Navigate to the project
@@ -298,6 +323,8 @@ dotnet test src/MiniCore.Web.Tests/MiniCore.Web.Tests.csproj
 - **[Chapter 6: Routing Framework](docs/Chapter6/README.md)** - Phase 6 implementation details ✅
 - **[Chapter 7: HTTP Server](docs/Chapter7/README.md)** - Phase 7 implementation details ✅
 - **[Chapter 8: MVC Framework](docs/Chapter8/README.md)** - Phase 8 implementation details ✅
+- **[Chapter 9: Mini ORM / Data Integration](docs/Chapter9/README.md)** - Phase 9 implementation details ✅
+- **[Chapter 10: Frontend Templating](docs/Chapter10/README.md)** - Phase 10 implementation details ✅
 
 ## 🎯 Expected Learning Outcomes
 
@@ -328,6 +355,8 @@ dotnet test src/MiniCore.Web.Tests/MiniCore.Web.Tests.csproj
 | `IHostedService` | Background tasks | `StartAsync`, `StopAsync` |
 | `IController` | MVC Controller | `HttpContext` property |
 | `IActionResult` | MVC Result | `ExecuteResultAsync(ActionContext)` |
+| `IViewEngine` | View Engine | `FindViewAsync()`, `RenderViewAsync()` |
+| `DbContext` | Database Context | `DbSet<T>`, `SaveChangesAsync()` |
 
 ## 📖 Chapter Summaries
 
@@ -479,9 +508,48 @@ Phase 8 successfully implemented a minimal MVC Framework to replace `Microsoft.A
 - ✅ Integration with routing framework (Phase 6)
 - ✅ All controllers in MiniCore.Web migrated to use MiniCore.Framework types
 - ✅ Removed adapter files (ConfigurationAdapter, LoggingAdapter, ServiceProviderFactory)
-- ✅ MiniCore.Web now uses MiniCore.Framework exclusively (except EF Core)
+- ✅ MiniCore.Web now uses MiniCore.Framework exclusively
 
 **Read More:** [Chapter 8 Documentation](docs/Chapter8/README.md)
+
+### [Chapter 9: Mini ORM / Data Integration](docs/Chapter9/README.md) ✅
+
+Phase 9 successfully implemented a minimal ORM framework to replace Entity Framework Core. This provides CRUD operations, LINQ-like query support, and object-relational mapping using reflection and ADO.NET.
+
+**Status:** ✅ Complete
+
+**Key Accomplishments:**
+- ✅ Implemented `DbContext` and `DbSet<T>` classes matching EF Core API
+- ✅ LINQ query translation (Where, OrderBy, Skip, Take, Select)
+- ✅ Async query methods (ToListAsync, AnyAsync, FirstOrDefaultAsync, FindAsync)
+- ✅ CRUD operations (Add, Remove, SaveChangesAsync)
+- ✅ Automatic schema creation (EnsureCreated)
+- ✅ Reflection-based object-relational mapping
+- ✅ Query provider that translates LINQ expressions to SQL
+- ✅ All Entity Framework Core dependencies removed from MiniCore.Web
+
+**Read More:** [Chapter 9 Documentation](docs/Chapter9/README.md)
+
+### [Chapter 10: Frontend Templating](docs/Chapter10/README.md) ✅
+
+Phase 10 successfully implemented a simple templating engine to replace Razor. This provides server-side rendering capabilities using lightweight template syntax without the complexity of Razor's Roslyn integration.
+
+**Status:** ✅ Complete
+
+**Key Accomplishments:**
+- ✅ Template engine with variable substitution (`{{variable}}`)
+- ✅ Support for conditionals (`{{#if}}...{{/if}}`)
+- ✅ Support for loops (`{{#each}}...{{/each}}`)
+- ✅ Property path navigation (e.g., `{{model.Property}}`)
+- ✅ HTML encoding for safe output
+- ✅ `IViewEngine` interface and `ViewEngine` implementation
+- ✅ View location by convention (`Views/{Controller}/{Action}.html`)
+- ✅ `ViewResult` action result for MVC integration
+- ✅ `Controller.View()` method overloads
+- ✅ Template caching for performance
+- ✅ All Razor dependencies removed from MiniCore.Web
+
+**Read More:** [Chapter 10 Documentation](docs/Chapter10/README.md)
 
 ---
 
@@ -495,7 +563,7 @@ This is an educational project. Feel free to explore, learn, and adapt the code 
 
 ---
 
-**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Phase 5 Complete ✅ | Phase 6 Complete ✅ | Phase 7 Complete ✅ | Phase 8 Complete ✅ | Next: Phase 9 - Mini ORM / Data Integration
+**Status:** Phase 0 Complete ✅ | Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Complete ✅ | Phase 4 Complete ✅ | Phase 5 Complete ✅ | Phase 6 Complete ✅ | Phase 7 Complete ✅ | Phase 8 Complete ✅ | Phase 9 Complete ✅ | Phase 10 Complete ✅ | Phase 11 Complete ✅
 
-**Migration Status:** MiniCore.Web now uses MiniCore.Framework for all core components. Only Entity Framework Core remains as a Microsoft dependency.
+**Migration Status:** MiniCore.Web now uses MiniCore.Framework exclusively. All Microsoft framework dependencies have been replaced with custom implementations. The application is fully self-contained.
 
