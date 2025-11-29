@@ -20,6 +20,11 @@ public class OkObjectResult : IActionResult
         _value = value;
     }
 
+    /// <summary>
+    /// Gets the value to return.
+    /// </summary>
+    public object? Value => _value;
+
     /// <inheritdoc />
     public async Task ExecuteResultAsync(ActionContext context)
     {

@@ -1,7 +1,8 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using MiniCore.Framework.Data;
+using MiniCore.Framework.Http;
+using MiniCore.Framework.Logging;
+using MiniCore.Framework.Mvc.Abstractions;
+using MiniCore.Framework.Mvc.Results;
 using MiniCore.Web.Controllers;
 using MiniCore.Web.Data;
 using MiniCore.Web.Models;
@@ -19,19 +20,17 @@ public class RedirectControllerTests : IDisposable
     {
         _mockLogger = new Mock<ILogger<RedirectController>>();
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        optionsBuilder.UseSqlite(":memory:");
+        var options = optionsBuilder.Options;
 
         _context = new AppDbContext(options);
+        _context.EnsureCreated();
         _controller = new RedirectController(_context, _mockLogger.Object);
 
         // Setup mock HTTP context
-        var httpContext = new DefaultHttpContext();
-        _controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = httpContext
-        };
+        var httpContext = new HttpContext();
+        _controller.HttpContext = httpContext;
     }
 
     [Fact]
@@ -109,7 +108,7 @@ public class RedirectControllerTests : IDisposable
         // Verify logging
         _mockLogger.Verify(
             x => x.Log(
-                LogLevel.Warning,
+                MiniCore.Framework.Logging.LogLevel.Warning,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Short code not found")),
                 It.IsAny<Exception>(),
@@ -140,7 +139,7 @@ public class RedirectControllerTests : IDisposable
         // Verify logging
         _mockLogger.Verify(
             x => x.Log(
-                LogLevel.Warning,
+                MiniCore.Framework.Logging.LogLevel.Warning,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Short code expired")),
                 It.IsAny<Exception>(),
@@ -170,7 +169,7 @@ public class RedirectControllerTests : IDisposable
         // Verify logging
         _mockLogger.Verify(
             x => x.Log(
-                LogLevel.Information,
+                MiniCore.Framework.Logging.LogLevel.Information,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Redirecting")),
                 It.IsAny<Exception>(),

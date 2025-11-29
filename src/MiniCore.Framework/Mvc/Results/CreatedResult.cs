@@ -23,6 +23,16 @@ public class CreatedResult : IActionResult
         _value = value;
     }
 
+    /// <summary>
+    /// Gets the URI at which the content has been created.
+    /// </summary>
+    public string Uri => _uri;
+
+    /// <summary>
+    /// Gets the content value to format in the entity body.
+    /// </summary>
+    public object? Value => _value;
+
     /// <inheritdoc />
     public async Task ExecuteResultAsync(ActionContext context)
     {

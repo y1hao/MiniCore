@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using MiniCore.Framework.Configuration.Abstractions;
+using MiniCore.Framework.Data;
+using MiniCore.Framework.DependencyInjection;
+using MiniCore.Framework.Logging;
 using MiniCore.Web.Data;
 using MiniCore.Web.Models;
 using MiniCore.Web.Services;
@@ -14,7 +14,7 @@ public class LinkCleanupServiceTests : IDisposable
     private readonly Mock<ILogger<LinkCleanupService>> _mockLogger;
     private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly AppDbContext _context;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly MiniCore.Framework.DependencyInjection.IServiceProvider _serviceProvider;
     private readonly LinkCleanupService _service;
 
     public LinkCleanupServiceTests()
@@ -22,13 +22,14 @@ public class LinkCleanupServiceTests : IDisposable
         _mockLogger = new Mock<ILogger<LinkCleanupService>>();
         _mockConfiguration = new Mock<IConfiguration>();
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        optionsBuilder.UseSqlite(":memory:");
+        var options = optionsBuilder.Options;
 
         _context = new AppDbContext(options);
+        _context.EnsureCreated();
 
-        var serviceCollection = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        var serviceCollection = new ServiceCollection();
         serviceCollection.AddSingleton(_context);
         _serviceProvider = serviceCollection.BuildServiceProvider();
 
@@ -61,7 +62,8 @@ public class LinkCleanupServiceTests : IDisposable
             ExpiresAt = DateTime.UtcNow.AddDays(1) // Not expired
         };
 
-        _context.ShortLinks.AddRange(expiredLink, activeLink);
+        _context.ShortLinks.Add(expiredLink);
+        _context.ShortLinks.Add(activeLink);
         await _context.SaveChangesAsync();
 
         // Act

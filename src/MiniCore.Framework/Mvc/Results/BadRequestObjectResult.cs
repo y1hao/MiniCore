@@ -20,6 +20,11 @@ public class BadRequestObjectResult : IActionResult
         _error = error;
     }
 
+    /// <summary>
+    /// Gets the error object to return.
+    /// </summary>
+    public object? Value => _error;
+
     /// <inheritdoc />
     public async Task ExecuteResultAsync(ActionContext context)
     {

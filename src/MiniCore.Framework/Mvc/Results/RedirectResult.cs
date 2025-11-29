@@ -18,6 +18,11 @@ public class RedirectResult : IActionResult
         _url = url ?? throw new ArgumentNullException(nameof(url));
     }
 
+    /// <summary>
+    /// Gets the URL to redirect to.
+    /// </summary>
+    public string Url => _url;
+
     /// <inheritdoc />
     public Task ExecuteResultAsync(ActionContext context)
     {

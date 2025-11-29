@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using MiniCore.Framework.Data;
+using MiniCore.Framework.Http;
+using MiniCore.Framework.Mvc.Abstractions;
+using MiniCore.Framework.Mvc.Results;
 using MiniCore.Web.Controllers;
 using MiniCore.Web.Data;
 using MiniCore.Web.Models;
@@ -14,21 +15,19 @@ public class AdminControllerTests : IDisposable
 
     public AdminControllerTests()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        optionsBuilder.UseSqlite(":memory:");
+        var options = optionsBuilder.Options;
 
         _context = new AppDbContext(options);
+        _context.EnsureCreated();
         _controller = new AdminController(_context);
 
         // Setup mock HTTP context
-        var httpContext = new DefaultHttpContext();
+        var httpContext = new HttpContext();
         httpContext.Request.Scheme = "https";
         httpContext.Request.Host = new HostString("localhost:5000");
-        _controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = httpContext
-        };
+        _controller.HttpContext = httpContext;
     }
 
     [Fact]
@@ -53,7 +52,9 @@ public class AdminControllerTests : IDisposable
             OriginalUrl = "https://sample.com", 
             CreatedAt = DateTime.UtcNow 
         };
-        _context.ShortLinks.AddRange(link1, link2, link3);
+        _context.ShortLinks.Add(link1);
+        _context.ShortLinks.Add(link2);
+        _context.ShortLinks.Add(link3);
         await _context.SaveChangesAsync();
 
         // Act
@@ -61,13 +62,16 @@ public class AdminControllerTests : IDisposable
 
         // Assert
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsAssignableFrom<IEnumerable<ShortLinkDto>>(viewResult.Model);
+        var model = Assert.IsAssignableFrom<IEnumerable<object>>(viewResult.Model);
         var linksList = model.ToList();
         Assert.Equal(3, linksList.Count);
         // Verify ordering: most recent first
-        Assert.Equal("ghi789", linksList[0].ShortCode);
-        Assert.Equal("def456", linksList[1].ShortCode);
-        Assert.Equal("abc123", linksList[2].ShortCode);
+        var firstLink = linksList[0];
+        var secondLink = linksList[1];
+        var thirdLink = linksList[2];
+        Assert.Equal("ghi789", GetShortCode(firstLink));
+        Assert.Equal("def456", GetShortCode(secondLink));
+        Assert.Equal("abc123", GetShortCode(thirdLink));
     }
 
     [Fact]
@@ -78,7 +82,7 @@ public class AdminControllerTests : IDisposable
 
         // Assert
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsAssignableFrom<IEnumerable<ShortLinkDto>>(viewResult.Model);
+        var model = Assert.IsAssignableFrom<IEnumerable<object>>(viewResult.Model);
         Assert.Empty(model);
     }
 
@@ -100,9 +104,9 @@ public class AdminControllerTests : IDisposable
 
         // Assert
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsAssignableFrom<IEnumerable<ShortLinkDto>>(viewResult.Model);
+        var model = Assert.IsAssignableFrom<IEnumerable<object>>(viewResult.Model);
         var linkDto = model.First();
-        Assert.Equal("https://localhost:5000/test123", linkDto.ShortUrl);
+        Assert.Equal("https://localhost:5000/test123", GetShortUrl(linkDto));
     }
 
     [Fact]
@@ -125,10 +129,11 @@ public class AdminControllerTests : IDisposable
 
         // Assert
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsAssignableFrom<IEnumerable<ShortLinkDto>>(viewResult.Model);
+        var model = Assert.IsAssignableFrom<IEnumerable<object>>(viewResult.Model);
         var linkDto = model.First();
-        Assert.NotNull(linkDto.ExpiresAt);
-        Assert.Equal(expiresAt, linkDto.ExpiresAt.Value, TimeSpan.FromSeconds(1));
+        var expiresAtValue = GetExpiresAt(linkDto);
+        Assert.NotNull(expiresAtValue);
+        Assert.Equal(expiresAt, expiresAtValue.Value, TimeSpan.FromSeconds(1));
     }
 
     [Fact]
@@ -150,9 +155,27 @@ public class AdminControllerTests : IDisposable
 
         // Assert
         var viewResult = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsAssignableFrom<IEnumerable<ShortLinkDto>>(viewResult.Model);
+        var model = Assert.IsAssignableFrom<IEnumerable<object>>(viewResult.Model);
         var linkDto = model.First();
-        Assert.Null(linkDto.ExpiresAt);
+        Assert.Null(GetExpiresAt(linkDto));
+    }
+
+    private static string GetShortCode(object linkDto)
+    {
+        var prop = linkDto.GetType().GetProperty("ShortCode");
+        return prop?.GetValue(linkDto)?.ToString() ?? string.Empty;
+    }
+
+    private static string GetShortUrl(object linkDto)
+    {
+        var prop = linkDto.GetType().GetProperty("ShortUrl");
+        return prop?.GetValue(linkDto)?.ToString() ?? string.Empty;
+    }
+
+    private static DateTime? GetExpiresAt(object linkDto)
+    {
+        var prop = linkDto.GetType().GetProperty("ExpiresAt");
+        return prop?.GetValue(linkDto) as DateTime?;
     }
 
     protected virtual void Dispose(bool disposing)

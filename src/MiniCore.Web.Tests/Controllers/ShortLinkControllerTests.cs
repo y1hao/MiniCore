@@ -1,13 +1,13 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+using MiniCore.Framework.Configuration.Abstractions;
+using MiniCore.Framework.Data;
+using MiniCore.Framework.Http;
+using MiniCore.Framework.Logging;
+using MiniCore.Framework.Mvc.Abstractions;
+using MiniCore.Framework.Mvc.Results;
 using MiniCore.Web.Controllers;
 using MiniCore.Web.Data;
 using MiniCore.Web.Models;
 using Moq;
-using System.Security.Claims;
 
 namespace MiniCore.Web.Tests.Controllers;
 
@@ -23,21 +23,19 @@ public class ShortLinkControllerTests : IDisposable
         _mockLogger = new Mock<ILogger<ShortLinkController>>();
         _mockConfiguration = new Mock<IConfiguration>();
 
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        optionsBuilder.UseSqlite(":memory:");
+        var options = optionsBuilder.Options;
 
         _context = new AppDbContext(options);
+        _context.EnsureCreated();
         _controller = new ShortLinkController(_context, _mockLogger.Object, _mockConfiguration.Object);
 
         // Setup mock HTTP context
-        var httpContext = new DefaultHttpContext();
+        var httpContext = new HttpContext();
         httpContext.Request.Scheme = "https";
         httpContext.Request.Host = new HostString("localhost:5000");
-        _controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = httpContext
-        };
+        _controller.HttpContext = httpContext;
     }
 
     [Fact]
@@ -46,14 +44,15 @@ public class ShortLinkControllerTests : IDisposable
         // Arrange
         var link1 = new ShortLink { ShortCode = "abc123", OriginalUrl = "https://example.com", CreatedAt = DateTime.UtcNow };
         var link2 = new ShortLink { ShortCode = "def456", OriginalUrl = "https://test.com", CreatedAt = DateTime.UtcNow };
-        _context.ShortLinks.AddRange(link1, link2);
+        _context.ShortLinks.Add(link1);
+        _context.ShortLinks.Add(link2);
         await _context.SaveChangesAsync();
 
         // Act
         var result = await _controller.GetLinks();
 
         // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var okResult = Assert.IsType<OkObjectResult>(result);
         var links = Assert.IsAssignableFrom<IEnumerable<ShortLinkDto>>(okResult.Value);
         Assert.Equal(2, links.Count());
     }
@@ -62,7 +61,7 @@ public class ShortLinkControllerTests : IDisposable
     public async Task CreateLink_WithValidUrl_ReturnsCreatedResult()
     {
         // Arrange
-        var configurationSection = new Mock<IConfigurationSection>();
+        var configurationSection = new Mock<MiniCore.Framework.Configuration.Abstractions.IConfigurationSection>();
         configurationSection.Setup(s => s.Value).Returns("30");
         _mockConfiguration.Setup(c => c.GetSection("LinkCleanup:DefaultExpirationDays"))
             .Returns(configurationSection.Object);
@@ -77,7 +76,7 @@ public class ShortLinkControllerTests : IDisposable
         var result = await _controller.CreateLink(request);
 
         // Assert
-        var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var createdResult = Assert.IsType<CreatedResult>(result);
         var dto = Assert.IsType<ShortLinkDto>(createdResult.Value);
         Assert.Equal(request.OriginalUrl, dto.OriginalUrl);
         Assert.NotNull(dto.ShortCode);
@@ -97,14 +96,14 @@ public class ShortLinkControllerTests : IDisposable
         var result = await _controller.CreateLink(request);
 
         // Assert
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
     public async Task CreateLink_WithCustomShortCode_ReturnsCreatedResult()
     {
         // Arrange
-        var configurationSection = new Mock<IConfigurationSection>();
+        var configurationSection = new Mock<MiniCore.Framework.Configuration.Abstractions.IConfigurationSection>();
         configurationSection.Setup(s => s.Value).Returns("30");
         _mockConfiguration.Setup(c => c.GetSection("LinkCleanup:DefaultExpirationDays"))
             .Returns(configurationSection.Object);
@@ -120,7 +119,7 @@ public class ShortLinkControllerTests : IDisposable
         var result = await _controller.CreateLink(request);
 
         // Assert
-        var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+        var createdResult = Assert.IsType<CreatedResult>(result);
         var dto = Assert.IsType<ShortLinkDto>(createdResult.Value);
         Assert.Equal("my-custom-link", dto.ShortCode);
         Assert.Equal(request.OriginalUrl, dto.OriginalUrl);
@@ -130,7 +129,7 @@ public class ShortLinkControllerTests : IDisposable
     public async Task CreateLink_WithDuplicateCustomShortCode_ReturnsConflict()
     {
         // Arrange
-        var configurationSection = new Mock<IConfigurationSection>();
+        var configurationSection = new Mock<MiniCore.Framework.Configuration.Abstractions.IConfigurationSection>();
         configurationSection.Setup(s => s.Value).Returns("30");
         _mockConfiguration.Setup(c => c.GetSection("LinkCleanup:DefaultExpirationDays"))
             .Returns(configurationSection.Object);
@@ -156,8 +155,9 @@ public class ShortLinkControllerTests : IDisposable
         var result = await _controller.CreateLink(request);
 
         // Assert
-        var conflictResult = Assert.IsType<ConflictObjectResult>(result.Result);
-        Assert.NotNull(conflictResult.Value);
+        // Note: ShortLinkController returns BadRequest with 409 status code, not ConflictObjectResult
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.NotNull(badRequestResult.Value);
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class ShortLinkControllerTests : IDisposable
         var result = await _controller.CreateLink(request);
 
         // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.NotNull(badRequestResult.Value);
     }
 
@@ -192,7 +192,7 @@ public class ShortLinkControllerTests : IDisposable
         var result = await _controller.CreateLink(request);
 
         // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.NotNull(badRequestResult.Value);
         var errorMessage = badRequestResult.Value.ToString();
         Assert.Contains("reserved", errorMessage, StringComparison.OrdinalIgnoreCase);
@@ -212,7 +212,7 @@ public class ShortLinkControllerTests : IDisposable
         var result = await _controller.CreateLink(request);
 
         // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.NotNull(badRequestResult.Value);
         var errorMessage = badRequestResult.Value.ToString();
         Assert.Contains("reserved", errorMessage, StringComparison.OrdinalIgnoreCase);
@@ -232,7 +232,7 @@ public class ShortLinkControllerTests : IDisposable
         var result = await _controller.CreateLink(request);
 
         // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.NotNull(badRequestResult.Value);
     }
 

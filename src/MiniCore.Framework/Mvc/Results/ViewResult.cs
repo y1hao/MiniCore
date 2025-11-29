@@ -30,6 +30,11 @@ public class ViewResult : IActionResult
         _viewData = viewData ?? new Dictionary<string, object>();
     }
 
+    /// <summary>
+    /// Gets the model to be passed to the view.
+    /// </summary>
+    public object? Model => _model;
+
     /// <inheritdoc />
     public async Task ExecuteResultAsync(ActionContext context)
     {
