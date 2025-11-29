@@ -207,12 +207,17 @@ Replace Razor with a simple templating engine.
 ### Phase 11: Background Services ✅
 Implement a minimal background service system to mirror `IHostedService` and `BackgroundService`.
 
-**Status:** ✅ Complete (implemented in Phase 4)
+**Status:** ✅ Complete (implemented in Phase 4)  
+**See:** [Chapter 11 Documentation](docs/Chapter11/README.md)
 
 **Key Features:**
 - ✅ `IHostedService` interface
 - ✅ Host-managed lifecycle integration
+- ✅ Service discovery from DI container
+- ✅ Graceful startup and shutdown
 - ✅ Example: `LinkCleanupService` runs hourly
+- ✅ Configuration-driven intervals
+- ✅ Scoped service access pattern
 
 ## 📁 Project Structure
 
@@ -262,6 +267,7 @@ MiniCore/
 │   ├── Chapter8/                   # Phase 8 documentation ✅
 │   ├── Chapter9/                   # Phase 9 documentation ✅
 │   ├── Chapter10/                  # Phase 10 documentation ✅
+│   ├── Chapter11/                  # Phase 11 documentation ✅
 │   └── SPEC.md                    # Detailed specification
 └── README.md                      # This file
 ```
@@ -325,6 +331,7 @@ dotnet test src/MiniCore.Web.Tests/MiniCore.Web.Tests.csproj
 - **[Chapter 8: MVC Framework](docs/Chapter8/README.md)** - Phase 8 implementation details ✅
 - **[Chapter 9: Mini ORM / Data Integration](docs/Chapter9/README.md)** - Phase 9 implementation details ✅
 - **[Chapter 10: Frontend Templating](docs/Chapter10/README.md)** - Phase 10 implementation details ✅
+- **[Chapter 11: Background Services](docs/Chapter11/README.md)** - Phase 11 implementation details ✅
 
 ## 🎯 Expected Learning Outcomes
 
@@ -550,6 +557,24 @@ Phase 10 successfully implemented a simple templating engine to replace Razor. T
 - ✅ All Razor dependencies removed from MiniCore.Web
 
 **Read More:** [Chapter 10 Documentation](docs/Chapter10/README.md)
+
+### [Chapter 11: Background Services](docs/Chapter11/README.md) ✅
+
+Phase 11 documents the background service system that was implemented in Phase 4. This provides a minimal background service system to mirror `IHostedService` and enables recurring jobs, maintenance tasks, and long-running services.
+
+**Status:** ✅ Complete (implemented in Phase 4)
+
+**Key Accomplishments:**
+- ✅ `IHostedService` interface implementation
+- ✅ Host-managed lifecycle integration (start and stop)
+- ✅ Service discovery from DI container
+- ✅ Graceful startup and shutdown with cancellation tokens
+- ✅ Example implementation: `LinkCleanupService` runs hourly
+- ✅ Configuration-driven intervals
+- ✅ Scoped service access pattern for database operations
+- ✅ Comprehensive logging integration
+
+**Read More:** [Chapter 11 Documentation](docs/Chapter11/README.md)
 
 ---
 
