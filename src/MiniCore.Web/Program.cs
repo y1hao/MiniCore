@@ -6,6 +6,7 @@ using MiniCore.Framework.Hosting;
 using MiniCore.Framework.Logging;
 using MiniCore.Framework.Logging.Console;
 using MiniCore.Framework.Logging.File;
+using MiniCore.Framework.Mvc.Views;
 using MiniHostedService = MiniCore.Framework.Hosting.IHostedService;
 using MiniLogLevel = MiniCore.Framework.Logging.LogLevel;
 using MiniWebApplicationBuilder = MiniCore.Framework.Hosting.WebApplicationBuilder;
@@ -28,6 +29,9 @@ if (!string.IsNullOrEmpty(logPath))
 }
 
 // Add services
+// Register ViewEngine for templating
+builder.Services.AddSingleton<IViewEngine, ViewEngine>();
+
 // Only register SQLite if not in testing environment (tests will register InMemory)
 if (!builder.Environment.IsEnvironment("Testing"))
 {

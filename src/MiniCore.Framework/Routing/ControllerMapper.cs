@@ -109,9 +109,34 @@ public class ControllerMapper
     {
         var invoker = new ControllerActionInvoker(controllerType, method, _serviceProvider, _modelBinder);
 
+        // Get controller name (remove "Controller" suffix if present)
+        var controllerName = controllerType.Name;
+        if (controllerName.EndsWith("Controller", StringComparison.OrdinalIgnoreCase))
+        {
+            controllerName = controllerName.Substring(0, controllerName.Length - 10);
+        }
+
+        // Get action name
+        var actionName = method.Name;
+
         return async context =>
         {
             var routeData = (context as Http.HttpContext)?.RouteData;
+            
+            // Ensure RouteData exists and populate controller/action
+            if (routeData == null)
+            {
+                routeData = new RouteData();
+                if (context is Http.HttpContext httpContext)
+                {
+                    httpContext.RouteData = routeData;
+                }
+            }
+
+            // Set controller and action in route data
+            routeData.Values["controller"] = controllerName;
+            routeData.Values["action"] = actionName;
+
             var actionContext = new ActionContext
             {
                 HttpContext = context,

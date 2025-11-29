@@ -9,6 +9,59 @@ namespace MiniCore.Framework.Mvc.Controllers;
 /// </summary>
 public abstract class Controller : ControllerBase
 {
+    private Dictionary<string, object>? _viewData;
+
+    /// <summary>
+    /// Gets the view data dictionary.
+    /// </summary>
+    public Dictionary<string, object> ViewData
+    {
+        get
+        {
+            _viewData ??= new Dictionary<string, object>();
+            return _viewData;
+        }
+    }
+
+    /// <summary>
+    /// Creates a <see cref="ViewResult"/> object that renders a view.
+    /// </summary>
+    /// <returns>The created <see cref="ViewResult"/> for the response.</returns>
+    protected ViewResult View()
+    {
+        return new ViewResult(viewData: ViewData);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="ViewResult"/> object that renders a view with the specified model.
+    /// </summary>
+    /// <param name="model">The model to pass to the view.</param>
+    /// <returns>The created <see cref="ViewResult"/> for the response.</returns>
+    protected ViewResult View(object? model)
+    {
+        return new ViewResult(model: model, viewData: ViewData);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="ViewResult"/> object that renders the specified view.
+    /// </summary>
+    /// <param name="viewName">The name of the view to render.</param>
+    /// <returns>The created <see cref="ViewResult"/> for the response.</returns>
+    protected ViewResult View(string viewName)
+    {
+        return new ViewResult(viewName: viewName, viewData: ViewData);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="ViewResult"/> object that renders the specified view with the specified model.
+    /// </summary>
+    /// <param name="viewName">The name of the view to render.</param>
+    /// <param name="model">The model to pass to the view.</param>
+    /// <returns>The created <see cref="ViewResult"/> for the response.</returns>
+    protected ViewResult View(string viewName, object? model)
+    {
+        return new ViewResult(viewName: viewName, model: model, viewData: ViewData);
+    }
 }
 
 /// <summary>

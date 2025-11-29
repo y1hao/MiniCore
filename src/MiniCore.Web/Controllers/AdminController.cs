@@ -18,18 +18,18 @@ public class AdminController(AppDbContext context) : Controller
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync();
 
-        var dtos = links.Select(l => new ShortLinkDto
+        var dtos = links.Select(l => new
         {
             Id = l.Id,
             ShortCode = l.ShortCode,
             OriginalUrl = l.OriginalUrl,
-            CreatedAt = l.CreatedAt,
-            ExpiresAt = l.ExpiresAt,
+            CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
+            ExpiresAt = l.ExpiresAt.HasValue ? l.ExpiresAt.Value.ToString("yyyy-MM-dd HH:mm") : null,
             ShortUrl = $"{Request.Scheme}://{Request.Host}/{l.ShortCode}"
         }).ToList();
 
-        // TODO: Implement view rendering when templating is available
-        return NotFound();
+        ViewData["Title"] = "Admin - URL Shortener";
+        return View(dtos);
     }
 }
 
