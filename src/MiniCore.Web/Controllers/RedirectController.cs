@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using MiniCore.Framework.Logging;
 using MiniCore.Framework.Mvc.Abstractions;
 using MiniCore.Framework.Mvc.Controllers;

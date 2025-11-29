@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using MiniCore.Framework.Configuration.Abstractions;
+using MiniCore.Framework.Data.Extensions;
 using MiniCore.Framework.DependencyInjection;
 using MiniCore.Framework.Logging;
 using MiniHostedService = MiniCore.Framework.Hosting.IHostedService;

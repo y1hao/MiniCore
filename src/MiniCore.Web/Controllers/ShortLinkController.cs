@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using MiniCore.Framework.Configuration.Abstractions;
+using MiniCore.Framework.Data.Extensions;
 using MiniCore.Framework.Logging;
 using MiniCore.Framework.Mvc.Abstractions;
 using MiniCore.Framework.Mvc.Controllers;
@@ -26,18 +26,19 @@ public class ShortLinkController(AppDbContext context, MiniCore.Framework.Loggin
             .OrderByDescending(l => l.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(l => new ShortLinkDto
-            {
-                Id = l.Id,
-                ShortCode = l.ShortCode,
-                OriginalUrl = l.OriginalUrl,
-                CreatedAt = l.CreatedAt,
-                ExpiresAt = l.ExpiresAt,
-                ShortUrl = $"{Request.Scheme}://{Request.Host}/{l.ShortCode}"
-            })
             .ToListAsync();
 
-        return Ok(links);
+        var dtos = links.Select(l => new ShortLinkDto
+        {
+            Id = l.Id,
+            ShortCode = l.ShortCode,
+            OriginalUrl = l.OriginalUrl,
+            CreatedAt = l.CreatedAt,
+            ExpiresAt = l.ExpiresAt,
+            ShortUrl = $"{Request.Scheme}://{Request.Host}/{l.ShortCode}"
+        }).ToList();
+
+        return Ok(dtos);
     }
 
     [HttpPost]
@@ -131,7 +132,7 @@ public class ShortLinkController(AppDbContext context, MiniCore.Framework.Loggin
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteLink(int id)
     {
-        var link = await _context.ShortLinks.FindAsync(id);
+        var link = await _context.ShortLinks.FindAsync(new object[] { id });
         if (link == null)
         {
             return NotFound();

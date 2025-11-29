@@ -1,24 +1,33 @@
-using Microsoft.EntityFrameworkCore;
+using MiniCore.Framework.Data;
 using MiniCore.Web.Models;
 
 namespace MiniCore.Web.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public class AppDbContext : DbContext
 {
-    public DbSet<ShortLink> ShortLinks { get; set; }
+    private DbSet<ShortLink>? _shortLinks;
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
-        base.OnModelCreating(modelBuilder);
+    }
 
-        modelBuilder.Entity<ShortLink>(entity =>
+    public DbSet<ShortLink> ShortLinks
+    {
+        get
         {
-            entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.ShortCode).IsUnique();
-            entity.Property(e => e.ShortCode).HasMaxLength(20).IsRequired();
-            entity.Property(e => e.OriginalUrl).IsRequired();
-            entity.Property(e => e.CreatedAt).IsRequired();
-        });
+            _shortLinks ??= new DbSet<ShortLink>(this, GetTableName(typeof(ShortLink)));
+            return _shortLinks;
+        }
+        set => _shortLinks = value;
+    }
+
+    protected override string GetTableName(Type entityType)
+    {
+        // Use pluralized table name
+        if (entityType == typeof(ShortLink))
+        {
+            return "ShortLinks";
+        }
+        return base.GetTableName(entityType);
     }
 }
-

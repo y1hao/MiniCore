@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using MiniCore.Framework.Configuration;
 using MiniCore.Framework.Configuration.Abstractions;
+using MiniCore.Framework.Data.Extensions;
 using MiniCore.Framework.DependencyInjection;
 using MiniCore.Framework.Hosting;
 using MiniCore.Framework.Logging;
@@ -11,7 +11,6 @@ using MiniLogLevel = MiniCore.Framework.Logging.LogLevel;
 using MiniWebApplicationBuilder = MiniCore.Framework.Hosting.WebApplicationBuilder;
 using MiniCore.Web.Data;
 using MiniCore.Web.Services;
-using static MiniCore.Web.EntityFrameworkExtensions;
 
 var builder = MiniWebApplicationBuilder.CreateBuilder(args);
 
@@ -33,14 +32,17 @@ if (!string.IsNullOrEmpty(logPath))
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlite(connectionString));
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        builder.Services.AddDbContext<AppDbContext>(options =>
+            options.UseSqlite(connectionString));
+    }
 }
 
 // Register background service (skip in test environment to avoid issues)
 if (!builder.Environment.IsEnvironment("Testing"))
 {
-    builder.Services.AddSingleton<MiniHostedService, LinkCleanupService>();
+    builder.Services.AddSingleton(typeof(MiniHostedService), typeof(LinkCleanupService));
 }
 
 var app = builder.Build();
@@ -50,7 +52,7 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    context.Database.EnsureCreated();
+    context.EnsureCreated();
 }
 
 // Configure the HTTP request pipeline
