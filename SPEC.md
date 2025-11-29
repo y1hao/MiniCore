@@ -33,8 +33,9 @@ Our **baseline app** will be a small **URL Shortener**, complete with:
   * ORM Layer
   * Frontend Templating
   * Background Services
+  * Testing Framework
 * Keep each subsystem **modular, testable, and replaceable**.
-* Maintain parity with a baseline ASP.NET Core app’s behaviour and public API surface (where reasonable).
+* Maintain parity with a baseline ASP.NET Core app's behaviour and public API surface (where reasonable).
 
 ---
 
@@ -299,6 +300,122 @@ In this project, it supports a **real, useful feature** of the baseline app: aut
 
 ---
 
+### **Phase 12 — Testing Framework**
+
+**Goal:** Implement a testing framework equivalent to `Microsoft.AspNetCore.Mvc.Testing` to enable integration testing of MiniCore applications.
+
+**Key Features**
+
+* `WebApplicationFactory<TEntryPoint>` class
+  * Creates a test host from application entry point
+  * Supports service replacement and configuration overrides
+  * Manages test host lifecycle (startup/shutdown)
+  * Provides `WithWebHostBuilder` for customizing test host configuration
+
+* `TestServer` implementation
+  * In-memory HTTP server for testing (alternative to HttpListener)
+  * Processes requests through middleware pipeline without network I/O
+  * Captures HTTP responses for assertions
+  * Supports custom request creation and response inspection
+
+* `HttpClient` creation from test host
+  * `CreateClient()` method returns HttpClient configured for test server
+  * `CreateClient(WebApplicationFactoryClientOptions)` for custom options
+  * Automatic base URL configuration
+  * Support for `AllowAutoRedirect` and other client options
+
+* Service replacement utilities
+  * `ConfigureTestServices(Action<IServiceCollection>)` for replacing services in tests
+  * Support for removing existing service registrations
+  * In-memory database configuration helpers
+  * Mock service injection helpers
+
+* Test host builder pattern
+  * `UseEnvironment(string)` for setting test environment
+  * `ConfigureServices(Action<IServiceCollection>)` for test-specific service configuration
+  * `ConfigureAppConfiguration(Action<IConfigurationBuilder>)` for test configuration
+  * Integration with existing `WebApplicationBuilder` infrastructure
+
+* Integration with xUnit
+  * `IClassFixture<WebApplicationFactory<T>>` support
+  * Proper test isolation (separate host per test class)
+  * Resource cleanup and disposal
+  * Async test support
+
+**Implementation Details**
+
+1. **TestServer Architecture:**
+   * Create a lightweight in-memory server that wraps the middleware pipeline
+   * Use `MemoryStream` for request/response bodies
+   * Translate `HttpRequestMessage` → `HttpContext` → `HttpResponseMessage`
+   * Support synchronous and asynchronous request processing
+
+2. **WebApplicationFactory Implementation:**
+   * Use reflection to locate entry point (Program class or similar)
+   * Create `WebApplicationBuilder` instance for testing
+   * Allow customization before building the application
+   * Manage host lifecycle (start on first use, dispose on fixture disposal)
+
+3. **Service Replacement:**
+   * Build service collection from application's Program.cs
+   * Apply test-specific service registrations (remove/add/replace)
+   * Support for scoped service replacement in tests
+   * Maintain service registration order and lifetime semantics
+
+4. **Database Testing Support:**
+   * Helper methods for configuring in-memory SQLite databases
+   * `UseInMemoryDatabase(string)` extension method
+   * Automatic database cleanup between tests
+   * Support for seeding test data
+
+**Example Usage**
+
+```csharp
+public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
+
+    public ApiIntegrationTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureServices(services =>
+            {
+                // Replace DbContext with in-memory database
+                services.RemoveAll<AppDbContext>();
+                services.AddDbContext<AppDbContext>(options =>
+                    options.UseSqlite(":memory:"));
+            });
+        });
+
+        _client = _factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task GetLinks_ReturnsEmptyList_WhenNoLinksExist()
+    {
+        var response = await _client.GetAsync("/api/links");
+        response.EnsureSuccessStatusCode();
+        var links = await response.Content.ReadFromJsonAsync<List<ShortLinkDto>>();
+        Assert.Empty(links);
+    }
+}
+```
+
+**Reasoning:**
+Integration testing is essential for validating end-to-end application behavior. The testing framework enables:
+* Verification that all framework components work together correctly
+* Testing of real HTTP request/response cycles
+* Validation of middleware pipeline execution
+* Testing of controller actions with actual routing and model binding
+* Database integration testing with isolated test data
+
+This phase completes the framework by providing the tools needed to confidently test MiniCore applications, ensuring reliability and correctness as the framework evolves.
+
+---
+
 ## 5. Key Abstractions Summary
 
 | Interface          | Purpose              | Minimal Requirements       |
@@ -312,6 +429,8 @@ In this project, it supports a **real, useful feature** of the baseline app: aut
 | `IActionResult`    | MVC Result           | Result execution           |
 | `IHostedService`   | Background tasks     | `StartAsync`, `StopAsync`  |
 | `RequestDelegate`  | Middleware link      | Async invocation           |
+| `WebApplicationFactory<T>` | Testing Framework | Test host creation, service replacement |
+| `TestServer`       | Testing Framework    | In-memory HTTP server for testing |
 
 ---
 
@@ -350,6 +469,7 @@ In this project, it supports a **real, useful feature** of the baseline app: aut
     /Routing
     /Middleware
     /Background
+    /Testing
   /MiniCore.Web
     /Controllers
     /Views
@@ -369,6 +489,11 @@ In this project, it supports a **real, useful feature** of the baseline app: aut
 * Plugin system for third-party middleware
 * Mini-SignalR (WebSocket server)
 * Frontend Hot-Reload integration
+* Advanced testing features:
+  * Test output logging integration
+  * Custom middleware for test scenarios
+  * WebSocket testing support
+  * Performance testing utilities
 
 ---
 
