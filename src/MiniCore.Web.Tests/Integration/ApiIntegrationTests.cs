@@ -1,31 +1,31 @@
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using MiniCore.Web;
-using MiniCore.Web.Data;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using MiniCore.Framework.Data;
+using MiniCore.Framework.Data.Extensions;
+using MiniCore.Framework.DependencyInjection;
+using MiniCore.Framework.Hosting;
+using MiniCore.Framework.Logging;
+using MiniCore.Framework.Logging.Console;
+using MiniCore.Framework.Mvc.Views;
+using MiniCore.Framework.Testing;
+using MiniCore.Web.Controllers;
+using MiniCore.Web.Data;
+using MiniCore.Web.Services;
+using MiniHostedService = MiniCore.Framework.Hosting.IHostedService;
 
 namespace MiniCore.Web.Tests.Integration;
 
-// TODO: These integration tests currently fail due to Options pattern dependency (expected).
-// The tests fail because ConsoleLoggerProvider requires IOptionsMonitor<T> which is not yet implemented.
-// Tests should pass after Phase 3 (Logging Framework) is complete, which will implement:
-// - Options pattern (IOptionsMonitor<T>, IOptions<T>)
-// - Configuration binding to options objects
-// - Proper logging provider configuration
-// See: docs/Chapter1/README.md#known-limitations for details.
-// NOTE: These tests are currently disabled because they use Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory
-// which is not compatible with MiniCore. They need to be rewritten to use MiniCore's testing infrastructure.
-/*
-public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+// Note: WebApplicationFactory<TEntryPoint> requires a type parameter from the application assembly.
+// Since Program.cs uses top-level statements (no Program class), we use ShortLinkController
+// as the type parameter. Any public type from MiniCore.Web would work (e.g., AppDbContext, 
+// other controllers, services, etc.). The type is only used to identify the assembly.
+public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<ShortLinkController>>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly WebApplicationFactory<ShortLinkController> _factory;
     private readonly HttpClient _client;
 
-    public ApiIntegrationTests(WebApplicationFactory<Program> factory)
+    public ApiIntegrationTests(WebApplicationFactory<ShortLinkController> factory)
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
@@ -33,30 +33,38 @@ public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
             builder.ConfigureServices(services =>
             {
                 // Remove all existing DbContext registrations
-                var descriptorsToRemove = services.Where(d =>
-                    d.ServiceType == typeof(DbContextOptions<AppDbContext>) ||
-                    d.ServiceType == typeof(AppDbContext) ||
-                    (d.ServiceType.IsGenericType && d.ServiceType.GetGenericTypeDefinition() == typeof(DbContextOptions<>))).ToList();
-                
-                foreach (var descriptor in descriptorsToRemove)
-                {
-                    services.Remove(descriptor);
-                }
+                services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<AppDbContext>();
 
                 // Remove background service if registered (to avoid issues in tests)
-                var hostedServices = services.Where(d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)).ToList();
-                foreach (var service in hostedServices)
-                {
-                    services.Remove(service);
-                }
+                services.RemoveAll<MiniHostedService>();
 
                 // Add in-memory database for testing
-                var dbName = "TestDb_" + Guid.NewGuid().ToString();
                 services.AddDbContext<AppDbContext>(options =>
-                {
-                    options.UseInMemoryDatabase(dbName);
-                });
+                    options.UseSqlite(":memory:"));
+
+                // Register ViewEngine for templating
+                services.AddSingleton<IViewEngine, ViewEngine>();
             });
+        }).ConfigureApplication(app =>
+        {
+            // Configure the HTTP request pipeline (replicate Program.cs configuration)
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+
+            app.UseStaticFiles();
+            app.UseRouting();
+
+            // Map API controllers first (attribute routing takes precedence)
+            app.MapControllers();
+
+            // Map redirect endpoint as fallback - only matches if no other route matched
+            app.MapFallbackToController(
+                action: "RedirectToUrl",
+                controller: "Redirect",
+                pattern: "{*path}");
         });
 
         // Create client that doesn't follow redirects automatically
@@ -64,12 +72,12 @@ public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
         {
             AllowAutoRedirect = false
         });
-        
+
         // Ensure database is created
         using (var scope = _factory.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            context.Database.EnsureCreated();
+            context.EnsureCreated();
         }
     }
 
@@ -123,7 +131,7 @@ public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        
+
         // Verify we can parse the error response
         var contentType = response.Content.Headers.ContentType?.MediaType;
         if (contentType?.Contains("json") == true)
@@ -223,16 +231,16 @@ public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
         // Assert - Check what status we actually got
         var statusCode = response.StatusCode;
         var location = response.Headers.Location?.ToString();
-        
+
         // Debug output
-        if (statusCode != HttpStatusCode.Redirect && 
-            statusCode != HttpStatusCode.MovedPermanently && 
+        if (statusCode != HttpStatusCode.Redirect &&
+            statusCode != HttpStatusCode.MovedPermanently &&
             statusCode != HttpStatusCode.Found)
         {
             var content = await response.Content.ReadAsStringAsync();
             throw new Exception($"Expected redirect but got {statusCode} for shortCode '{shortCode}'. Location header: {location}. Content: {content.Substring(0, Math.Min(200, content.Length))}");
         }
-        
+
         Assert.NotNull(location);
         // Normalize URL (remove trailing slash if present) for comparison
         var normalizedLocation = location.TrimEnd('/');
@@ -282,5 +290,3 @@ public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.NotNull(expiresAtProp.GetString());
     }
 }
-*/
-
