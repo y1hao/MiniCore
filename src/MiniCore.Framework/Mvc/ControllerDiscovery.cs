@@ -1,5 +1,6 @@
 using System.Reflection;
 using MiniCore.Framework.Mvc.Abstractions;
+using MiniCore.Framework.Mvc.Controllers;
 using MiniCore.Framework.Routing.Attributes;
 
 namespace MiniCore.Framework.Mvc;
@@ -19,13 +20,25 @@ public class ControllerDiscovery : IControllerDiscovery
 
         foreach (var assembly in assemblies)
         {
-            var controllerTypes = assembly.GetTypes()
-                .Where(t => t.IsClass &&
+            Type[] types;
+            try
+            {
+                types = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                // If some types can't be loaded, use the ones that were loaded
+                types = ex.Types.Where(t => t != null).ToArray()!;
+            }
+
+            var controllerTypes = types
+                .Where(t => t != null &&
+                           t.IsClass &&
                            !t.IsAbstract &&
                            (t.Name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase) ||
                             t.GetCustomAttribute<ControllerAttribute>() != null) &&
                            (typeof(Abstractions.IController).IsAssignableFrom(t) ||
-                            typeof(Controllers.ControllerBase).IsAssignableFrom(t)));
+                            typeof(ControllerBase).IsAssignableFrom(t)));
 
             foreach (var controllerType in controllerTypes)
             {

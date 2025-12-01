@@ -88,10 +88,12 @@ public class WebApplication
     {
         // Get controller mapper from services
         var mapper = Services.GetService<ControllerMapper>();
-        if (mapper != null)
+        if (mapper == null)
         {
-            mapper.MapControllers(assemblies);
+            throw new InvalidOperationException(
+                "ControllerMapper service is not registered. Ensure routing services are configured.");
         }
+        mapper.MapControllers(assemblies);
         return this;
     }
 

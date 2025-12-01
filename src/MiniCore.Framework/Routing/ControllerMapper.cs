@@ -54,7 +54,16 @@ public class ControllerMapper
                 .ToArray();
         }
 
-        var controllers = _controllerDiscovery.DiscoverControllers(assemblies);
+        var controllers = _controllerDiscovery.DiscoverControllers(assemblies).ToList();
+
+        // If no controllers found with specified assemblies, try searching all assemblies as fallback
+        if (controllers.Count == 0)
+        {
+            var allAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
+                .ToArray();
+            controllers = _controllerDiscovery.DiscoverControllers(allAssemblies).ToList();
+        }
 
         foreach (var controllerInfo in controllers)
         {
@@ -90,9 +99,21 @@ public class ControllerMapper
             // Handle absolute routes (starting with /)
             if (controllerPrefix.StartsWith("/"))
             {
-                return controllerPrefix;
+                // If method template is also absolute, it takes precedence
+                if (!string.IsNullOrEmpty(methodTemplate) && methodTemplate.StartsWith("/"))
+                {
+                    return methodTemplate;
+                }
+                // Split the prefix into segments and add them
+                var prefixSegments = controllerPrefix.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+                parts.AddRange(prefixSegments);
             }
-            parts.Add(controllerPrefix.TrimStart('/'));
+            else
+            {
+                // Split the prefix into segments and add them
+                var prefixSegments = controllerPrefix.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                parts.AddRange(prefixSegments);
+            }
         }
 
         if (!string.IsNullOrEmpty(methodTemplate))
@@ -102,7 +123,9 @@ public class ControllerMapper
             {
                 return methodTemplate;
             }
-            parts.Add(methodTemplate.TrimStart('/'));
+            // Split the template into segments and add them
+            var templateSegments = methodTemplate.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            parts.AddRange(templateSegments);
         }
 
         return "/" + string.Join("/", parts);
