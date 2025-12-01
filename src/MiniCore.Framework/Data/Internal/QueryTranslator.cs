@@ -156,6 +156,26 @@ internal static class QueryTranslator
                 _ => "="
             };
 
+            // For string equality comparisons, use explicit CAST with COLLATE BINARY for case-sensitive matching
+            // SQLite's default TEXT collation is NOCASE (case-insensitive), so we need COLLATE BINARY
+            bool isStringEquality = (binaryExpr.NodeType == ExpressionType.Equal || binaryExpr.NodeType == ExpressionType.NotEqual) &&
+                                    IsStringType(binaryExpr.Left.Type) && IsStringType(binaryExpr.Right.Type);
+            
+            if (isStringEquality)
+            {
+                // Wrap column references with CAST to TEXT COLLATE BINARY for explicit case-sensitive comparison
+                // This ensures that "ABC123" != "abc123" in SQLite
+                if (left.StartsWith("[") && left.EndsWith("]"))
+                {
+                    left = $"CAST({left} AS TEXT) COLLATE BINARY";
+                }
+                // If right is also a column reference, do the same
+                if (right.StartsWith("[") && right.EndsWith("]"))
+                {
+                    right = $"CAST({right} AS TEXT) COLLATE BINARY";
+                }
+            }
+
             return $"({left} {op} {right})";
         }
 
@@ -220,6 +240,11 @@ internal static class QueryTranslator
         {
             return null;
         }
+    }
+
+    private static bool IsStringType(Type type)
+    {
+        return type == typeof(string) || type == typeof(String);
     }
 }
 

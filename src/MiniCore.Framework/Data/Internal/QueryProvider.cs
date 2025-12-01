@@ -24,14 +24,19 @@ internal class QueryProvider : IQueryProvider
     public IQueryable CreateQuery(Expression expression)
     {
         var elementType = TypeSystem.GetElementType(expression.Type);
-        try
+        var dbSetType = typeof(DbSet<>).MakeGenericType(elementType);
+        var constructor = dbSetType.GetConstructor(
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            binder: null,
+            types: new[] { typeof(DbContext), typeof(string), typeof(Expression) },
+            modifiers: null);
+
+        if (constructor == null)
         {
-            return (IQueryable)Activator.CreateInstance(typeof(DbSet<>).MakeGenericType(elementType), _context, _tableName, expression)!;
+            throw new InvalidOperationException($"Failed to find constructor for DbSet<{elementType}>");
         }
-        catch (System.Reflection.TargetInvocationException tie)
-        {
-            throw tie.InnerException!;
-        }
+
+        return (IQueryable)constructor.Invoke(new object[] { _context, _tableName, expression })!;
     }
 
     IQueryable<TResult> IQueryProvider.CreateQuery<TResult>(Expression expression)
@@ -40,10 +45,15 @@ internal class QueryProvider : IQueryProvider
         {
             throw new InvalidOperationException($"DbSet only supports reference types, but {typeof(TResult)} is not a reference type.");
         }
-        // Use reflection to create DbSet<TResult> to satisfy generic constraint
+        // Use reflection to create DbSet<TResult> (internal constructor) to satisfy generic constraint
         var dbSetType = typeof(DbSet<>).MakeGenericType(typeof(TResult));
-        var constructor = dbSetType.GetConstructor(new[] { typeof(DbContext), typeof(string), typeof(Expression) })
+        var constructor = dbSetType.GetConstructor(
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+            binder: null,
+            types: new[] { typeof(DbContext), typeof(string), typeof(Expression) },
+            modifiers: null)
             ?? throw new InvalidOperationException($"Failed to find constructor for DbSet<{typeof(TResult)}>");
+
         return (IQueryable<TResult>)constructor.Invoke(new object[] { _context, _tableName, expression })!;
     }
 
@@ -118,7 +128,11 @@ internal class QueryProvider : IQueryProvider
             if (genericTypeDef == typeof(IEnumerable<>) || genericTypeDef == typeof(IQueryable<>) || genericTypeDef == typeof(List<>))
             {
                 var listType = typeof(List<>).MakeGenericType(entityType);
-                var list = Activator.CreateInstance(listType, results);
+                // Convert List<object> to IEnumerable<entityType> for the constructor
+                var enumerableType = typeof(IEnumerable<>).MakeGenericType(entityType);
+                var castMethod = typeof(Enumerable).GetMethod("Cast")!.MakeGenericMethod(entityType);
+                var typedEnumerable = castMethod.Invoke(null, new object[] { results });
+                var list = Activator.CreateInstance(listType, typedEnumerable);
                 if (list != null)
                 {
                     return (TResult)list;

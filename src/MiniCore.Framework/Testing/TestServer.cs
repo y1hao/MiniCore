@@ -83,7 +83,7 @@ public class TestServer : IDisposable
             httpRequest.Headers[header.Key] = string.Join(", ", header.Value);
         }
 
-        // Copy content headers
+        // Copy content headers and body
         if (request.Content != null)
         {
             if (request.Content.Headers.ContentType != null)
@@ -96,9 +96,12 @@ public class TestServer : IDisposable
                 httpRequest.ContentLength = request.Content.Headers.ContentLength.Value;
             }
 
-            // Copy content body
-            var requestBody = await request.Content.ReadAsStreamAsync();
-            httpRequest.Body = requestBody;
+            // Copy content body into a seekable memory stream so model binding can read it
+            var sourceStream = await request.Content.ReadAsStreamAsync();
+            var memoryStream = new MemoryStream();
+            await sourceStream.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+            httpRequest.Body = memoryStream;
         }
 
         // Execute the request delegate

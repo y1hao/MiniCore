@@ -43,12 +43,15 @@ public class ControllerMapper
     /// <summary>
     /// Maps controllers from the specified assemblies.
     /// </summary>
-    /// <param name="assemblies">The assemblies to scan for controllers. If not specified, uses calling assembly.</param>
+    /// <param name="assemblies">The assemblies to scan for controllers. If not specified, searches all loaded assemblies.</param>
     public void MapControllers(params Assembly[] assemblies)
     {
         if (assemblies == null || assemblies.Length == 0)
         {
-            assemblies = new[] { Assembly.GetCallingAssembly() };
+            // Search all loaded assemblies to find controllers (needed for test scenarios)
+            assemblies = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
+                .ToArray();
         }
 
         var controllers = _controllerDiscovery.DiscoverControllers(assemblies);
@@ -156,10 +159,24 @@ public class ControllerMapper
     public void MapFallbackToController(string action, string controller, string? pattern = null)
     {
         // Find the controller type
-        var controllers = _controllerDiscovery.DiscoverControllers(Assembly.GetCallingAssembly());
+        // First try the calling assembly, then search all loaded assemblies
+        var assemblies = new[] { Assembly.GetCallingAssembly() };
+        var controllers = _controllerDiscovery.DiscoverControllers(assemblies);
         var controllerInfo = controllers.FirstOrDefault(c => 
             c.ControllerType.Name.Equals(controller + "Controller", StringComparison.OrdinalIgnoreCase) ||
             c.ControllerType.Name.Equals(controller, StringComparison.OrdinalIgnoreCase));
+
+        // If not found, search all loaded assemblies (needed for test scenarios)
+        if (controllerInfo == null)
+        {
+            var allAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
+                .ToArray();
+            controllers = _controllerDiscovery.DiscoverControllers(allAssemblies);
+            controllerInfo = controllers.FirstOrDefault(c => 
+                c.ControllerType.Name.Equals(controller + "Controller", StringComparison.OrdinalIgnoreCase) ||
+                c.ControllerType.Name.Equals(controller, StringComparison.OrdinalIgnoreCase));
+        }
 
         if (controllerInfo == null)
         {

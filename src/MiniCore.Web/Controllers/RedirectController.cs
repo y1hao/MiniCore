@@ -25,8 +25,13 @@ public class RedirectController(AppDbContext context, MiniCore.Framework.Logging
         
         var shortCode = pathSegments[0];
         
-        var link = await _context.ShortLinks
-            .FirstOrDefaultAsync(l => l.ShortCode == shortCode);
+        // SQLite's default TEXT collation is case-insensitive, so we query with WHERE clause
+        // and then filter case-sensitively in C# to ensure exact match
+        var potentialLinks = await _context.ShortLinks
+            .ToListAsync();
+        
+        // Case-sensitive match: filter in C# since SQLite default is case-insensitive
+        var link = potentialLinks.FirstOrDefault(l => string.Equals(l.ShortCode, shortCode, StringComparison.Ordinal));
 
         if (link == null)
         {

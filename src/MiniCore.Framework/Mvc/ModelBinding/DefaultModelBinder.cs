@@ -99,32 +99,39 @@ public class DefaultModelBinder : IModelBinder
 
         try
         {
-            // Check if stream is readable and has content
+            // Check if stream is readable
             if (!request.Body.CanRead)
             {
                 return null;
             }
 
-            // Save original position
-            var originalPosition = request.Body.Position;
-            request.Body.Position = 0;
-
-            // Check if stream has content
-            if (request.Body.Length == 0 && request.Body.CanSeek)
+            // If the stream is seekable, rewind to the beginning so we can read the full body
+            long? originalPosition = null;
+            if (request.Body.CanSeek)
             {
-                request.Body.Position = originalPosition;
-                return null;
+                originalPosition = request.Body.Position;
+                request.Body.Position = 0;
+
+                // If there's no content, bail early
+                if (request.Body.Length == 0)
+                {
+                    if (originalPosition.HasValue)
+                    {
+                        request.Body.Position = originalPosition.Value;
+                    }
+                    return null;
+                }
             }
 
             using var reader = new StreamReader(request.Body, Encoding.UTF8, leaveOpen: true);
             var json = reader.ReadToEnd();
-            
-            // Restore original position
-            if (request.Body.CanSeek)
+
+            // Restore original position if we changed it
+            if (originalPosition.HasValue && request.Body.CanSeek)
             {
-                request.Body.Position = originalPosition;
+                request.Body.Position = originalPosition.Value;
             }
-            
+
             if (string.IsNullOrEmpty(json))
             {
                 return null;

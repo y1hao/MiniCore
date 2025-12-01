@@ -20,14 +20,14 @@ namespace MiniCore.Web.Tests.Integration;
 // Since Program.cs uses top-level statements (no Program class), we use ShortLinkController
 // as the type parameter. Any public type from MiniCore.Web would work (e.g., AppDbContext, 
 // other controllers, services, etc.). The type is only used to identify the assembly.
-public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<ShortLinkController>>
+public class ApiIntegrationTests : IDisposable
 {
     private readonly WebApplicationFactory<ShortLinkController> _factory;
     private readonly HttpClient _client;
 
-    public ApiIntegrationTests(WebApplicationFactory<ShortLinkController> factory)
+    public ApiIntegrationTests()
     {
-        _factory = factory.WithWebHostBuilder(builder =>
+        _factory = new WebApplicationFactory<ShortLinkController>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
             builder.ConfigureServices(services =>
@@ -288,5 +288,11 @@ public class ApiIntegrationTests : IClassFixture<WebApplicationFactory<ShortLink
         var link = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(link.TryGetProperty("expiresAt", out var expiresAtProp));
         Assert.NotNull(expiresAtProp.GetString());
+    }
+
+    public void Dispose()
+    {
+        _client?.Dispose();
+        _factory?.Dispose();
     }
 }

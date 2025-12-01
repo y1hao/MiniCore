@@ -95,6 +95,35 @@ public static class LoggerExtensions
         logger.Log(LogLevel.Critical, 0, CreateState(message, args), exception, FormatMessage);
     }
 
+    /// <summary>
+    /// Represents structured log state that supports both structured formatting
+    /// and meaningful <see cref="object.ToString"/> output for testing.
+    /// </summary>
+    private sealed class StructuredLogState : List<KeyValuePair<string, object?>>, IReadOnlyList<KeyValuePair<string, object?>>
+    {
+        /// <summary>
+        /// Gets the original message template.
+        /// </summary>
+        public string Message { get; }
+
+        public StructuredLogState(string message, IReadOnlyList<string> placeholders, object?[] args)
+        {
+            Message = message;
+
+            for (var i = 0; i < Math.Min(placeholders.Count, args.Length); i++)
+            {
+                Add(new KeyValuePair<string, object?>(placeholders[i], args[i]));
+            }
+        }
+
+        public override string ToString()
+        {
+            // Ensure that ToString contains the rendered message so tests that
+            // inspect the state object (v.ToString()) see the expected text.
+            return MessageFormatter.Format(Message, this);
+        }
+    }
+
     private static object CreateState(string? message, object?[] args)
     {
         if (message == null)
@@ -111,33 +140,28 @@ public static class LoggerExtensions
 
         if (placeholders.Count == 0)
         {
-            // No placeholders, format with string.Format if args are provided
+            // No placeholders, keep behavior similar to before and just store the message,
+            // optionally attempting simple formatting when args are provided.
             if (args.Length > 0)
             {
                 try
                 {
-                    return new { Message = string.Format(message, args) };
+                    var formatted = string.Format(message, args);
+                    return new { Message = formatted };
                 }
                 catch
                 {
-                    // If formatting fails, return as-is
-                    return new { Message = message };
+                    // If formatting fails, fall back to the original message
                 }
             }
+
             return new { Message = message };
         }
 
-        // Create a dictionary with placeholder names and values
-        var stateDict = new Dictionary<string, object?>();
-        for (int i = 0; i < Math.Min(placeholders.Count, args.Length); i++)
-        {
-            stateDict[placeholders[i]] = args[i];
-        }
-
-        // Also include the original message template
-        stateDict["Message"] = message;
-
-        return stateDict;
+        // Use a structured state that:
+        // - Provides values for placeholders
+        // - Produces a meaningful ToString() for tests that inspect the state object
+        return new StructuredLogState(message, placeholders, args);
     }
 
     private static string FormatMessage(object? state, Exception? exception)
@@ -147,12 +171,12 @@ public static class LoggerExtensions
             return exception?.ToString() ?? string.Empty;
         }
 
-        // Handle dictionary state (from structured logging)
+        // Handle dictionary state from any older callers, if present
         if (state is Dictionary<string, object?> dict)
         {
             var message = dict.TryGetValue("Message", out var msg) ? msg?.ToString() ?? string.Empty : string.Empty;
             var formatted = MessageFormatter.Format(message, dict);
-            
+
             if (exception != null)
             {
                 return formatted + Environment.NewLine + exception;
@@ -160,7 +184,7 @@ public static class LoggerExtensions
             return formatted;
         }
 
-        // Handle anonymous types - try to extract Message property first
+        // Handle anonymous types, POCOs, and StructuredLogState
         var stateType = state.GetType();
         var messageProperty = stateType.GetProperty("Message");
         string messageStr;
@@ -184,7 +208,7 @@ public static class LoggerExtensions
         }
 
         var result = MessageFormatter.Format(messageStr, state);
-        
+
         if (exception != null)
         {
             return result + Environment.NewLine + exception;
