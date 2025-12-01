@@ -19,7 +19,21 @@ public class DbContextOptionsBuilder
     /// <returns>The same builder instance so that multiple calls can be chained.</returns>
     public DbContextOptionsBuilder UseSqlite(string connectionString)
     {
-        _options.ConnectionString = connectionString;
+        // Handle :memory: shorthand for in-memory database used in tests.
+        // SQLite's pure in-memory databases are scoped to a single connection,
+        // but our ORM opens new connections per operation. To ensure schema/data
+        // persist across connections in tests, map this to a unique temporary
+        // file-based database per test instance to avoid file locking issues.
+        if (connectionString == ":memory:")
+        {
+            var tempFileName = $"MiniCoreTests_{Guid.NewGuid():N}.db";
+            var tempPath = Path.Combine(Path.GetTempPath(), tempFileName);
+            _options.ConnectionString = $"Data Source={tempPath}";
+        }
+        else
+        {
+            _options.ConnectionString = connectionString;
+        }
         return this;
     }
 }

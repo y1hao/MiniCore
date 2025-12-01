@@ -81,6 +81,8 @@ internal static class DatabaseHelper
     {
         for (int i = 0; i < parameters.Length; i++)
         {
+            // SQLite requires parameter names to be set, even for positional parameters
+            // We use @p0, @p1, etc. naming convention
             var parameter = new SqliteParameter($"@p{i}", parameters[i] ?? DBNull.Value);
             command.Parameters.Add(parameter);
         }

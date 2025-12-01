@@ -33,7 +33,11 @@ public class BadRequestObjectResult : IActionResult
 
         if (_error != null)
         {
-            var json = JsonSerializer.Serialize(_error);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            var json = JsonSerializer.Serialize(_error, options);
             var bytes = Encoding.UTF8.GetBytes(json);
             await context.HttpContext.Response.Body.WriteAsync(bytes, 0, bytes.Length);
         }

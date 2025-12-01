@@ -80,7 +80,7 @@ public abstract class DbContext : IDbContext
                     if (keyProperty != null)
                     {
                         var keyValue = keyProperty.GetValue(entity);
-                        var whereClause = $"[{keyPropertyName}] = ?";
+                        var whereClause = $"[{keyPropertyName}] = @p0";
                         var sql = QueryBuilder.BuildDeleteQuery(tableName, whereClause);
                         
                         await DatabaseHelper.ExecuteNonQueryAsync(connection, sql, keyValue);
@@ -102,7 +102,7 @@ public abstract class DbContext : IDbContext
                     var values = propertyValues.Values.ToList();
                     values.Add(keyValue); // Add key value at the end for WHERE clause
                     
-                    var whereClause = $"[{keyPropertyName}] = ?";
+                    var whereClause = $"[{keyPropertyName}] = @p{values.Count - 1}";
                     var sql = QueryBuilder.BuildUpdateQuery(tableName, columnNames, whereClause);
                     
                     await DatabaseHelper.ExecuteNonQueryAsync(connection, sql, values.ToArray());
@@ -135,13 +135,19 @@ public abstract class DbContext : IDbContext
             var entityType = property.PropertyType.GetGenericArguments()[0];
             var tableName = GetTableName(entityType);
             
-            // Check if table exists
-            var tableExistsSql = $"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}'";
-            var exists = DatabaseHelper.ExecuteScalarAsync(connection, tableExistsSql).GetAwaiter().GetResult();
+            // Check if table exists using parameterized query
+            var tableExistsSql = "SELECT name FROM sqlite_master WHERE type='table' AND name=@p0";
+            var exists = DatabaseHelper.ExecuteScalarAsync(connection, tableExistsSql, tableName)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
             
             if (exists == null)
             {
-                DatabaseHelper.CreateTableIfNotExistsAsync(connection, entityType, tableName).GetAwaiter().GetResult();
+                DatabaseHelper.CreateTableIfNotExistsAsync(connection, entityType, tableName)
+                    .ConfigureAwait(false)
+                    .GetAwaiter()
+                    .GetResult();
                 created = true;
             }
         }

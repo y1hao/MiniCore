@@ -113,7 +113,7 @@ public class DbSet<TEntity> : IQueryable<TEntity> where TEntity : class
             return null;
 
         var keyValue = keyValues[0];
-        var whereClause = $"[{keyPropertyName}] = ?";
+        var whereClause = $"[{keyPropertyName}] = @p0";
         var sql = QueryBuilder.BuildSelectQuery(_tableName, whereClause);
 
         using var connection = DatabaseHelper.CreateConnection(_context.ConnectionString!);

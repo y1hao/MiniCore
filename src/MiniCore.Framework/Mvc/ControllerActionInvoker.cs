@@ -185,23 +185,56 @@ public class ControllerActionInvoker : IActionInvoker
 
     private static object? BindFromBody(IHttpRequest request, Type parameterType)
     {
-        if (request.Body == null || request.Body.Length == 0)
+        if (request.Body == null)
         {
             return GetDefaultValue(parameterType);
         }
 
         try
         {
-            request.Body.Position = 0;
+            // Ensure the stream is readable
+            if (!request.Body.CanRead)
+            {
+                return GetDefaultValue(parameterType);
+            }
+
+            // Save and reset position if seekable
+            long? originalPosition = null;
+            if (request.Body.CanSeek)
+            {
+                originalPosition = request.Body.Position;
+                request.Body.Position = 0;
+
+                if (request.Body.Length == 0)
+                {
+                    if (originalPosition.HasValue)
+                    {
+                        request.Body.Position = originalPosition.Value;
+                    }
+                    return GetDefaultValue(parameterType);
+                }
+            }
+
             using var reader = new StreamReader(request.Body, Encoding.UTF8, leaveOpen: true);
             var json = reader.ReadToEnd();
+
+            // Restore original position if we changed it
+            if (originalPosition.HasValue && request.Body.CanSeek)
+            {
+                request.Body.Position = originalPosition.Value;
+            }
 
             if (string.IsNullOrEmpty(json))
             {
                 return GetDefaultValue(parameterType);
             }
 
-            return JsonSerializer.Deserialize(json, parameterType);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            return JsonSerializer.Deserialize(json, parameterType, options);
         }
         catch
         {
@@ -309,7 +342,11 @@ public class ControllerActionInvoker : IActionInvoker
         {
             context.HttpContext.Response.StatusCode = 200;
             context.HttpContext.Response.ContentType = "application/json";
-            var json = JsonSerializer.Serialize(result);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            var json = JsonSerializer.Serialize(result, options);
             var bytes = Encoding.UTF8.GetBytes(json);
             await context.HttpContext.Response.Body.WriteAsync(bytes, 0, bytes.Length);
         }

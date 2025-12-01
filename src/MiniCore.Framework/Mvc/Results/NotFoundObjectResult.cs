@@ -28,7 +28,11 @@ public class NotFoundObjectResult : IActionResult
 
         if (_value != null)
         {
-            var json = JsonSerializer.Serialize(_value);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            var json = JsonSerializer.Serialize(_value, options);
             var bytes = Encoding.UTF8.GetBytes(json);
             await context.HttpContext.Response.Body.WriteAsync(bytes, 0, bytes.Length);
         }

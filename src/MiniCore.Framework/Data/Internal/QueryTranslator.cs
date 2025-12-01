@@ -166,8 +166,9 @@ internal static class QueryTranslator
 
         if (expression is ConstantExpression constantExpr)
         {
+            var paramIndex = parameters.Count;
             parameters.Add(constantExpr.Value);
-            return "?";
+            return $"@p{paramIndex}";
         }
 
         if (expression is MethodCallExpression methodCallExpr)
@@ -176,8 +177,9 @@ internal static class QueryTranslator
             if (methodCallExpr.Method.Name == "Contains" && methodCallExpr.Object is MemberExpression member)
             {
                 var value = GetConstantValue(methodCallExpr.Arguments[0]);
+                var paramIndex = parameters.Count;
                 parameters.Add($"%{value}%");
-                return $"[{member.Member.Name}] LIKE ?";
+                return $"[{member.Member.Name}] LIKE @p{paramIndex}";
             }
         }
 

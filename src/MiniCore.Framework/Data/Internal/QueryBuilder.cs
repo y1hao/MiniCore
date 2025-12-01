@@ -46,7 +46,7 @@ internal static class QueryBuilder
     {
         var columns = columnNames.ToList();
         var columnList = string.Join(", ", columns.Select(EscapeColumnName));
-        var valuePlaceholders = string.Join(", ", columns.Select(_ => "?"));
+        var valuePlaceholders = string.Join(", ", columns.Select((_, i) => $"@p{i}"));
 
         return $"INSERT INTO {EscapeTableName(tableName)} ({columnList}) VALUES ({valuePlaceholders})";
     }
@@ -57,7 +57,7 @@ internal static class QueryBuilder
     public static string BuildUpdateQuery(string tableName, IEnumerable<string> columnNames, string whereClause)
     {
         var columns = columnNames.ToList();
-        var setClause = string.Join(", ", columns.Select(c => $"{EscapeColumnName(c)} = ?"));
+        var setClause = string.Join(", ", columns.Select((c, i) => $"{EscapeColumnName(c)} = @p{i}"));
 
         return $"UPDATE {EscapeTableName(tableName)} SET {setClause} WHERE {whereClause}";
     }
