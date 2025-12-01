@@ -73,7 +73,7 @@ public class ControllerMapper
                                       .ToArray());
         if (controllers.Count == 0 && wasExplicitAssembly)
         {
-            var assemblyNames = string.Join(", ", assemblies.Select(a => a.GetName().Name));
+            var assemblyNames = string.Join(", ", assemblies.Select(a => a.GetName().Name ?? "Unknown"));
             throw new InvalidOperationException(
                 $"No controllers found in the specified assembly(ies): {assemblyNames}. " +
                 "Ensure controllers inherit from ControllerBase and are public non-abstract classes.");

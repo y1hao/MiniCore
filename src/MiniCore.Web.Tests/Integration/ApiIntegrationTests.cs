@@ -74,8 +74,8 @@ public class ApiIntegrationTests : IDisposable
             app.UseRouting();
 
             // Map API controllers first (attribute routing takes precedence)
-            // Call without arguments to search all loaded assemblies
-            app.MapControllers();
+            // Explicitly pass the controller assembly to ensure it's discovered
+            app.MapControllers(typeof(ShortLinkController).Assembly);
 
             // Map redirect endpoint as fallback - only matches if no other route matched
             app.MapFallbackToController(

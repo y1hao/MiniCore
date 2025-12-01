@@ -135,6 +135,24 @@ internal static class QueryTranslator
 
     private static string TranslateWhereExpression(Expression expression, List<object?> parameters)
     {
+        // Handle UnaryExpression (e.g., Convert, Quote) - unwrap it
+        if (expression is UnaryExpression unaryExpr)
+        {
+            // If it's a Quote (lambda), extract the operand
+            if (unaryExpr.NodeType == ExpressionType.Quote)
+            {
+                return TranslateWhereExpression(unaryExpr.Operand, parameters);
+            }
+            // For other unary expressions (like Convert), just unwrap
+            return TranslateWhereExpression(unaryExpr.Operand, parameters);
+        }
+
+        // Handle LambdaExpression - extract the body
+        if (expression is LambdaExpression lambdaExpr)
+        {
+            return TranslateWhereExpression(lambdaExpr.Body, parameters);
+        }
+        
         if (expression is BinaryExpression binaryExpr)
         {
             var left = TranslateWhereExpression(binaryExpr.Left, parameters);
@@ -181,7 +199,35 @@ internal static class QueryTranslator
 
         if (expression is MemberExpression memberExpr)
         {
-            return $"[{memberExpr.Member.Name}]";
+            // Handle nullable HasValue property - translate to IS NOT NULL
+            if (memberExpr.Member.Name == "HasValue" && IsNullableType(memberExpr.Expression.Type))
+            {
+                var columnName = GetColumnName(memberExpr.Expression);
+                return $"{columnName} IS NOT NULL";
+            }
+
+            // Handle nullable Value property - just get the column name
+            if (memberExpr.Member.Name == "Value" && IsNullableType(memberExpr.Expression.Type))
+            {
+                return GetColumnName(memberExpr.Expression);
+            }
+
+            // Check if this is a captured variable or constant value (not a column access)
+            // If the expression is not a ParameterExpression, it might be a captured variable
+            if (!(memberExpr.Expression is ParameterExpression))
+            {
+                // Try to evaluate it as a constant value
+                var value = GetConstantValue(memberExpr);
+                if (value != null)
+                {
+                    var paramIndex = parameters.Count;
+                    parameters.Add(value);
+                    return $"@p{paramIndex}";
+                }
+            }
+
+            // Handle regular member access - could be a property chain
+            return GetColumnName(memberExpr);
         }
 
         if (expression is ConstantExpression constantExpr)
@@ -200,6 +246,19 @@ internal static class QueryTranslator
                 var paramIndex = parameters.Count;
                 parameters.Add($"%{value}%");
                 return $"[{member.Member.Name}] LIKE @p{paramIndex}";
+            }
+        }
+
+        // Handle field access (e.g., captured variables like `now`)
+        if (expression.NodeType == ExpressionType.MemberAccess)
+        {
+            // Try to evaluate the expression to get its value
+            var value = GetConstantValue(expression);
+            if (value != null)
+            {
+                var paramIndex = parameters.Count;
+                parameters.Add(value);
+                return $"@p{paramIndex}";
             }
         }
 
@@ -256,6 +315,38 @@ internal static class QueryTranslator
         if (expression is ConstantExpression constantExpr)
             return constantExpr.Value;
 
+        // Handle member access (properties, fields) - try to evaluate
+        if (expression is MemberExpression memberExpr)
+        {
+            // If accessing a field or property on a constant, evaluate it
+            if (memberExpr.Expression is ConstantExpression constExpr)
+            {
+                var obj = constExpr.Value;
+                if (obj != null)
+                {
+                    if (memberExpr.Member is System.Reflection.FieldInfo fieldInfo)
+                    {
+                        return fieldInfo.GetValue(obj);
+                    }
+                    if (memberExpr.Member is System.Reflection.PropertyInfo propInfo)
+                    {
+                        return propInfo.GetValue(obj);
+                    }
+                }
+            }
+            // Try to compile and evaluate the entire expression
+            try
+            {
+                var lambda = Expression.Lambda(expression);
+                var compiled = lambda.Compile();
+                return compiled.DynamicInvoke();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         // Try to compile and evaluate
         try
         {
@@ -272,6 +363,44 @@ internal static class QueryTranslator
     private static bool IsStringType(Type type)
     {
         return type == typeof(string) || type == typeof(String);
+    }
+
+    private static bool IsNullableType(Type type)
+    {
+        return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+    }
+
+    private static string GetColumnName(Expression expression)
+    {
+        // Traverse member access chain to get the final column name
+        if (expression is MemberExpression memberExpr)
+        {
+            // If this is accessing a property on a parameter (e.g., l.ExpiresAt), get the property name
+            if (memberExpr.Expression is ParameterExpression)
+            {
+                return $"[{memberExpr.Member.Name}]";
+            }
+            // If this is a nested member access (e.g., l.ExpiresAt.Value), traverse up to get the base column
+            if (memberExpr.Expression is MemberExpression parentMember)
+            {
+                // For l.ExpiresAt.Value, we want [ExpiresAt]
+                // parentMember would be l.ExpiresAt, so get its member name
+                if (parentMember.Expression is ParameterExpression)
+                {
+                    return $"[{parentMember.Member.Name}]";
+                }
+            }
+            // Fallback: just use the member name
+            return $"[{memberExpr.Member.Name}]";
+        }
+        
+        // Fallback: try to get member name from expression
+        if (expression is ParameterExpression)
+        {
+            return string.Empty; // Can't determine column from parameter alone
+        }
+        
+        return string.Empty;
     }
 }
 

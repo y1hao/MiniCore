@@ -65,9 +65,32 @@ public class RouteRegistry : IRouteRegistry
 
         method = method.ToUpperInvariant();
 
-        // Try to match against registered routes
+        // First, try to match against specific (non-catch-all) routes
         foreach (var route in _routes)
         {
+            // Skip catch-all routes in the first pass
+            if (IsCatchAllRoute(route.Pattern))
+            {
+                continue;
+            }
+
+            if (route.Method == method && _matcher.TryMatch(route.Pattern, path, out var matchedRouteData))
+            {
+                handler = route.Handler;
+                routeData = matchedRouteData;
+                return true;
+            }
+        }
+
+        // If no specific route matched, try catch-all routes
+        foreach (var route in _routes)
+        {
+            // Only check catch-all routes in the second pass
+            if (!IsCatchAllRoute(route.Pattern))
+            {
+                continue;
+            }
+
             if (route.Method == method && _matcher.TryMatch(route.Pattern, path, out var matchedRouteData))
             {
                 handler = route.Handler;
@@ -85,6 +108,11 @@ public class RouteRegistry : IRouteRegistry
         }
 
         return false;
+    }
+
+    private static bool IsCatchAllRoute(string pattern)
+    {
+        return pattern.EndsWith("{*path}", StringComparison.OrdinalIgnoreCase);
     }
 
     private class RouteEntry
