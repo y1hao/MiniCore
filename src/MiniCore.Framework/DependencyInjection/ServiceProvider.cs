@@ -71,6 +71,21 @@ public class ServiceProvider : IServiceProvider, System.IServiceProvider, IServi
     /// </summary>
     internal object? GetService(Type serviceType, Dictionary<Type, object>? scopedInstances)
     {
+        // Special handling for IServiceProvider and IServiceScopeFactory - always return this provider
+        if (serviceType == typeof(IServiceProvider) || serviceType == typeof(System.IServiceProvider))
+        {
+            if (scopedInstances != null)
+            {
+                return new ScopedServiceProviderWrapper(this, scopedInstances);
+            }
+            return this;
+        }
+        
+        if (serviceType == typeof(IServiceScopeFactory))
+        {
+            return this; // ServiceProvider implements IServiceScopeFactory
+        }
+        
         // Handle IEnumerable<T> - Microsoft DI returns all registered services of that type
         if (serviceType.IsGenericType && serviceType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
         {
@@ -522,7 +537,25 @@ public class ServiceProvider : IServiceProvider, System.IServiceProvider, IServi
     /// <returns>True if the type can be resolved.</returns>
     private bool CanResolveType(Type type)
     {
-        return FindServiceDescriptor(type) != null;
+        // IServiceProvider and IServiceScopeFactory are always resolvable
+        if (type == typeof(IServiceProvider) || type == typeof(System.IServiceProvider) || type == typeof(IServiceScopeFactory))
+        {
+            return true;
+        }
+        
+        // Check if directly registered
+        if (FindServiceDescriptor(type) != null)
+        {
+            return true;
+        }
+        
+        // Check if it's a closed generic that can be resolved from an open generic
+        if (type.IsGenericType && !type.IsGenericTypeDefinition)
+        {
+            return ResolveOpenGeneric(type) != null;
+        }
+        
+        return false;
     }
 
     /// <summary>
