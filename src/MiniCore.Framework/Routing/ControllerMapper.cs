@@ -65,6 +65,20 @@ public class ControllerMapper
             controllers = _controllerDiscovery.DiscoverControllers(allAssemblies).ToList();
         }
 
+        // If still no controllers found and assemblies were explicitly provided, this indicates a problem
+        // Check if assemblies were explicitly provided (not the fallback case)
+        var wasExplicitAssembly = assemblies != null && assemblies.Length > 0 && 
+                                  !assemblies.SequenceEqual(AppDomain.CurrentDomain.GetAssemblies()
+                                      .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
+                                      .ToArray());
+        if (controllers.Count == 0 && wasExplicitAssembly)
+        {
+            var assemblyNames = string.Join(", ", assemblies.Select(a => a.GetName().Name));
+            throw new InvalidOperationException(
+                $"No controllers found in the specified assembly(ies): {assemblyNames}. " +
+                "Ensure controllers inherit from ControllerBase and are public non-abstract classes.");
+        }
+
         foreach (var controllerInfo in controllers)
         {
             MapController(controllerInfo);
