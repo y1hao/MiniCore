@@ -41,20 +41,35 @@ internal class QueryProvider : IQueryProvider
 
     IQueryable<TResult> IQueryProvider.CreateQuery<TResult>(Expression expression)
     {
-        if (!typeof(TResult).IsClass)
+        // Extract the actual entity type if TResult is IQueryable<T> or IOrderedQueryable<T>
+        Type entityType = typeof(TResult);
+        if (typeof(TResult).IsGenericType)
         {
-            throw new InvalidOperationException($"DbSet only supports reference types, but {typeof(TResult)} is not a reference type.");
+            var genericTypeDef = typeof(TResult).GetGenericTypeDefinition();
+            if (genericTypeDef == typeof(IQueryable<>) || genericTypeDef == typeof(IOrderedQueryable<>))
+            {
+                entityType = typeof(TResult).GetGenericArguments()[0];
+            }
         }
-        // Use reflection to create DbSet<TResult> (internal constructor) to satisfy generic constraint
-        var dbSetType = typeof(DbSet<>).MakeGenericType(typeof(TResult));
+
+        if (!entityType.IsClass)
+        {
+            throw new InvalidOperationException($"DbSet only supports reference types, but {entityType} is not a reference type.");
+        }
+        
+        // Use reflection to create DbSet<entityType> (internal constructor) to satisfy generic constraint
+        var dbSetType = typeof(DbSet<>).MakeGenericType(entityType);
         var constructor = dbSetType.GetConstructor(
             System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
             binder: null,
             types: new[] { typeof(DbContext), typeof(string), typeof(Expression) },
             modifiers: null)
-            ?? throw new InvalidOperationException($"Failed to find constructor for DbSet<{typeof(TResult)}>");
+            ?? throw new InvalidOperationException($"Failed to find constructor for DbSet<{entityType}>");
 
-        return (IQueryable<TResult>)constructor.Invoke(new object[] { _context, _tableName, expression })!;
+        var dbSet = constructor.Invoke(new object[] { _context, _tableName, expression });
+        
+        // Cast to the requested type (IQueryable<TResult> or IOrderedQueryable<TResult>)
+        return (IQueryable<TResult>)dbSet!;
     }
 
     public object? Execute(Expression expression)

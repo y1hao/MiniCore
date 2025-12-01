@@ -11,7 +11,7 @@ namespace MiniCore.Framework.Data;
 /// A DbSet can be used to query and save instances of TEntity.
 /// </summary>
 /// <typeparam name="TEntity">The type of entity.</typeparam>
-public class DbSet<TEntity> : IQueryable<TEntity> where TEntity : class
+public class DbSet<TEntity> : IQueryable<TEntity>, IOrderedQueryable<TEntity> where TEntity : class
 {
     private readonly DbContext _context;
     private readonly string _tableName;

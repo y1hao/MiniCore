@@ -210,10 +210,36 @@ internal static class QueryTranslator
     {
         Expression expr = orderExpr.Expression;
         
+        // Handle UnaryExpression with Quote node type (lambda expressions are quoted)
+        while (expr is System.Linq.Expressions.UnaryExpression unaryExpr && unaryExpr.NodeType == ExpressionType.Quote)
+        {
+            expr = unaryExpr.Operand;
+        }
+        
         // Extract the body from lambda expressions
+        // Handle both LambdaExpression and compiler-generated expression types
         if (expr is LambdaExpression lambdaExpr)
         {
             expr = lambdaExpr.Body;
+        }
+        else if (expr.NodeType == ExpressionType.Lambda)
+        {
+            // Try to get Body property using reflection for compiler-generated lambda types
+            var bodyProperty = expr.GetType().GetProperty("Body", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (bodyProperty != null && typeof(Expression).IsAssignableFrom(bodyProperty.PropertyType))
+            {
+                var bodyValue = bodyProperty.GetValue(expr);
+                if (bodyValue is Expression bodyExpr)
+                {
+                    expr = bodyExpr;
+                }
+            }
+        }
+        
+        // Handle UnaryExpression (conversions, etc.) - but not Quote
+        while (expr is System.Linq.Expressions.UnaryExpression unaryExpr2 && unaryExpr2.NodeType != ExpressionType.Quote)
+        {
+            expr = unaryExpr2.Operand;
         }
         
         if (expr is MemberExpression memberExpr)
@@ -221,6 +247,7 @@ internal static class QueryTranslator
             var direction = orderExpr.Descending ? "DESC" : "ASC";
             return $"[{memberExpr.Member.Name}] {direction}";
         }
+        
         return string.Empty;
     }
 
@@ -261,6 +288,13 @@ internal class QueryExpressionVisitor : ExpressionVisitor
 
     protected override Expression VisitMethodCall(MethodCallExpression node)
     {
+        // Visit the source (first argument) first to process nested method calls
+        if (node.Arguments.Count > 0)
+        {
+            Visit(node.Arguments[0]);
+        }
+
+        // Then process the current method call
         if (node.Method.DeclaringType == typeof(Queryable) || node.Method.DeclaringType == typeof(Enumerable))
         {
             switch (node.Method.Name)
@@ -270,6 +304,7 @@ internal class QueryExpressionVisitor : ExpressionVisitor
                     {
                         var predicate = node.Arguments[1];
                         WhereExpressions.Add(predicate);
+                        Visit(predicate); // Visit the predicate to extract any nested expressions
                     }
                     break;
 
@@ -278,6 +313,7 @@ internal class QueryExpressionVisitor : ExpressionVisitor
                     {
                         var keySelector = node.Arguments[1];
                         OrderByExpressions.Add((keySelector, false));
+                        Visit(keySelector); // Visit the key selector to extract member expression
                     }
                     break;
 
@@ -286,6 +322,7 @@ internal class QueryExpressionVisitor : ExpressionVisitor
                     {
                         var keySelector = node.Arguments[1];
                         OrderByExpressions.Add((keySelector, true));
+                        Visit(keySelector); // Visit the key selector to extract member expression
                     }
                     break;
 
@@ -307,12 +344,13 @@ internal class QueryExpressionVisitor : ExpressionVisitor
                     if (node.Arguments.Count >= 2)
                     {
                         SelectExpression = node.Arguments[1];
+                        Visit(node.Arguments[1]); // Visit the select expression
                     }
                     break;
             }
         }
 
-        return base.VisitMethodCall(node);
+        return node;
     }
 
     private int? GetConstantIntValue(Expression expression)
