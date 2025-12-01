@@ -51,9 +51,15 @@ public class HttpListenerServer : IServer
         }
 
         // Add prefixes to listener
+        // HttpListener requires all prefixes to end with '/'
         foreach (var url in _urls)
         {
-            _listener.Prefixes.Add(url);
+            var prefix = url;
+            if (!prefix.EndsWith("/"))
+            {
+                prefix += "/";
+            }
+            _listener.Prefixes.Add(prefix);
         }
 
         // Start the listener
