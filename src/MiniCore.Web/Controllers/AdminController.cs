@@ -24,7 +24,8 @@ public class AdminController(AppDbContext context) : Controller
             ShortCode = l.ShortCode,
             OriginalUrl = l.OriginalUrl,
             CreatedAt = l.CreatedAt.ToString("yyyy-MM-dd HH:mm"),
-            ExpiresAt = l.ExpiresAt.HasValue ? l.ExpiresAt.Value.ToString("yyyy-MM-dd HH:mm") : null,
+            ExpiresAt = l.ExpiresAt, // Keep as DateTime? for test compatibility
+            ExpiresAtFormatted = l.ExpiresAt.HasValue ? l.ExpiresAt.Value.ToString("yyyy-MM-dd HH:mm") : null,
             ShortUrl = $"{Request.Scheme}://{Request.Host}/{l.ShortCode}"
         }).ToList();
 

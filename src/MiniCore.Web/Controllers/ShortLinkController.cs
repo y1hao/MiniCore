@@ -82,8 +82,7 @@ public class ShortLinkController(AppDbContext context, MiniCore.Framework.Loggin
             // Check for uniqueness
             if (await _context.ShortLinks.AnyAsync(l => l.ShortCode == shortCode))
             {
-                Response.StatusCode = 409; // Conflict
-                return BadRequest(new { error = $"Short code '{shortCode}' is already in use" });
+                return Conflict(new { error = $"Short code '{shortCode}' is already in use" });
             }
         }
         else

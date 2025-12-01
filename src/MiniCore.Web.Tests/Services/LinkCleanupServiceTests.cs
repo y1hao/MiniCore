@@ -1,5 +1,6 @@
 using MiniCore.Framework.Configuration.Abstractions;
 using MiniCore.Framework.Data;
+using MiniCore.Framework.Data.Extensions;
 using MiniCore.Framework.DependencyInjection;
 using MiniCore.Framework.Logging;
 using MiniCore.Web.Data;
@@ -16,22 +17,36 @@ public class LinkCleanupServiceTests : IDisposable
     private readonly AppDbContext _context;
     private readonly MiniCore.Framework.DependencyInjection.IServiceProvider _serviceProvider;
     private readonly LinkCleanupService _service;
+    private readonly string _tempDbPath;
 
     public LinkCleanupServiceTests()
     {
         _mockLogger = new Mock<ILogger<LinkCleanupService>>();
         _mockConfiguration = new Mock<IConfiguration>();
 
+        // Use a file-based database for testing to ensure all contexts share the same database
+        var tempDbPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.db");
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-        optionsBuilder.UseSqlite(":memory:");
+        optionsBuilder.UseSqlite($"Data Source={tempDbPath}");
         var options = optionsBuilder.Options;
 
         _context = new AppDbContext(options);
         _context.EnsureCreated();
 
         var serviceCollection = new ServiceCollection();
-        serviceCollection.AddSingleton(_context);
+        // Register DbContextOptions so all contexts use the same database file
+        serviceCollection.AddSingleton(options);
+        // Register AppDbContext as scoped - return the same instance for testing
+        // This ensures the service uses the exact same context instance as the test
+        serviceCollection.AddScoped<AppDbContext>(_ => _context);
+        // Build provider first, then register IServiceScopeFactory using the built provider
+        var tempProvider = serviceCollection.BuildServiceProvider();
+        // Register IServiceScopeFactory (ServiceProvider implements it, but we need to register it explicitly)
+        serviceCollection.AddSingleton<IServiceScopeFactory>(_ => (IServiceScopeFactory)tempProvider);
         _serviceProvider = serviceCollection.BuildServiceProvider();
+        
+        // Store the temp path for cleanup
+        _tempDbPath = tempDbPath;
 
         var configurationSection = new Mock<IConfigurationSection>();
         configurationSection.Setup(s => s.Value).Returns("1");
@@ -96,10 +111,12 @@ public class LinkCleanupServiceTests : IDisposable
         var cancellationTokenSource = new CancellationTokenSource();
         await _service.CleanupExpiredLinks(cancellationTokenSource.Token);
 
-        // Assert
+        // Assert - Reload data from database to ensure we see the latest state
+        await _context.SaveChangesAsync(); // Ensure any pending changes are saved
         var finalCount = await _context.ShortLinks.CountAsync();
+        var activeExists = await _context.ShortLinks.AnyAsync(l => l.Id == activeLink.Id);
         Assert.Equal(initialCount, finalCount);
-        Assert.True(await _context.ShortLinks.AnyAsync(l => l.Id == activeLink.Id));
+        Assert.True(activeExists, "Active link should still exist");
     }
 
     protected virtual void Dispose(bool disposing)
@@ -107,6 +124,11 @@ public class LinkCleanupServiceTests : IDisposable
         if (disposing)
         {
             _context.Dispose();
+            // Clean up temporary database file
+            if (!string.IsNullOrEmpty(_tempDbPath) && File.Exists(_tempDbPath))
+            {
+                try { File.Delete(_tempDbPath); } catch { }
+            }
         }
     }
 

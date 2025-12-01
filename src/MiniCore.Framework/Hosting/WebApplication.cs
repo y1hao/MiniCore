@@ -1,3 +1,4 @@
+using System.Reflection;
 using MiniCore.Framework.Configuration.Abstractions;
 using MiniCore.Framework.DependencyInjection;
 using MiniCore.Framework.Http;
@@ -81,14 +82,15 @@ public class WebApplication
     /// <summary>
     /// Adds endpoints for controller actions to the <see cref="WebApplication"/> request execution pipeline.
     /// </summary>
+    /// <param name="assemblies">The assemblies to scan for controllers. If not specified, searches all loaded assemblies.</param>
     /// <returns>The <see cref="WebApplication"/>.</returns>
-    public WebApplication MapControllers()
+    public WebApplication MapControllers(params Assembly[] assemblies)
     {
         // Get controller mapper from services
         var mapper = Services.GetService<ControllerMapper>();
         if (mapper != null)
         {
-            mapper.MapControllers();
+            mapper.MapControllers(assemblies);
         }
         return this;
     }

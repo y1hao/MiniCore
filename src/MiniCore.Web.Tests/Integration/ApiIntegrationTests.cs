@@ -30,6 +30,22 @@ public class ApiIntegrationTests : IDisposable
         _factory = new WebApplicationFactory<ShortLinkController>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
+            
+            // Set ContentRootPath to the application directory so views can be found
+            // Get the directory of the test assembly, then navigate to the web project
+            var testAssemblyLocation = typeof(ApiIntegrationTests).Assembly.Location;
+            var testProjectDir = Path.GetDirectoryName(testAssemblyLocation);
+            if (testProjectDir != null)
+            {
+                // Navigate from MiniCore.Web.Tests/bin/Debug/net10.0 to MiniCore.Web
+                var solutionRoot = Path.GetFullPath(Path.Combine(testProjectDir, "..", "..", "..", "..", ".."));
+                var webProjectPath = Path.Combine(solutionRoot, "src", "MiniCore.Web");
+                if (Directory.Exists(webProjectPath))
+                {
+                    builder.Environment.ContentRootPath = webProjectPath;
+                }
+            }
+            
             builder.ConfigureServices(services =>
             {
                 // Remove all existing DbContext registrations
@@ -58,7 +74,8 @@ public class ApiIntegrationTests : IDisposable
             app.UseRouting();
 
             // Map API controllers first (attribute routing takes precedence)
-            app.MapControllers();
+            // Explicitly pass the controller assembly to ensure it's discovered
+            app.MapControllers(typeof(ShortLinkController).Assembly);
 
             // Map redirect endpoint as fallback - only matches if no other route matched
             app.MapFallbackToController(

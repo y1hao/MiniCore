@@ -31,6 +31,11 @@ public static class StatusCodes
     public const int Status404NotFound = 404;
 
     /// <summary>
+    /// HTTP status code 409 Conflict.
+    /// </summary>
+    public const int Status409Conflict = 409;
+
+    /// <summary>
     /// HTTP status code 500 Internal Server Error.
     /// </summary>
     public const int Status500InternalServerError = 500;

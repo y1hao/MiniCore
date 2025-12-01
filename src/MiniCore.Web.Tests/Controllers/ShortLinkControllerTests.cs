@@ -155,9 +155,8 @@ public class ShortLinkControllerTests : IDisposable
         var result = await _controller.CreateLink(request);
 
         // Assert
-        // Note: ShortLinkController returns BadRequest with 409 status code, not ConflictObjectResult
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.NotNull(badRequestResult.Value);
+        var conflictResult = Assert.IsType<ConflictObjectResult>(result);
+        Assert.NotNull(conflictResult.Value);
     }
 
     [Fact]

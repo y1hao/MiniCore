@@ -143,6 +143,13 @@ public abstract class ControllerBase : IController
     protected CreatedResult Created(string uri, object? value) => new(uri, value);
 
     /// <summary>
+    /// Creates a <see cref="ConflictObjectResult"/> that produces a <see cref="StatusCodes.Status409Conflict"/> response.
+    /// </summary>
+    /// <param name="error">An error object to be returned.</param>
+    /// <returns>The created <see cref="ConflictObjectResult"/> for the response.</returns>
+    protected ConflictObjectResult Conflict(object? error) => new(error);
+
+    /// <summary>
     /// Creates a <see cref="RedirectResult"/> object that redirects to the specified URL.
     /// </summary>
     /// <param name="url">The URL to redirect to.</param>
