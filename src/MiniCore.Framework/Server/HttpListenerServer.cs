@@ -224,7 +224,7 @@ public class HttpListenerServer : IServer
         httpRequest.PathBase = string.Empty;
 
         // Copy headers
-        foreach (string key in listenerRequest.Headers.AllKeys)
+        foreach (string? key in listenerRequest.Headers.AllKeys)
         {
             if (key == null) continue;
             var values = listenerRequest.Headers.GetValues(key);

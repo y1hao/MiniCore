@@ -63,7 +63,7 @@ public class ControllerActionInvoker : IActionInvoker
 
         // Bind action parameters
         var parameters = _actionMethod.GetParameters();
-        var args = new object[parameters.Length];
+        var args = new object?[parameters.Length];
 
         for (int i = 0; i < parameters.Length; i++)
         {

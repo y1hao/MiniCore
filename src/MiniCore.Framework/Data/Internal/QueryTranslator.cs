@@ -200,14 +200,14 @@ internal static class QueryTranslator
         if (expression is MemberExpression memberExpr)
         {
             // Handle nullable HasValue property - translate to IS NOT NULL
-            if (memberExpr.Member.Name == "HasValue" && IsNullableType(memberExpr.Expression.Type))
+            if (memberExpr.Member.Name == "HasValue" && memberExpr.Expression != null && IsNullableType(memberExpr.Expression.Type))
             {
                 var columnName = GetColumnName(memberExpr.Expression);
                 return $"{columnName} IS NOT NULL";
             }
 
             // Handle nullable Value property - just get the column name
-            if (memberExpr.Member.Name == "Value" && IsNullableType(memberExpr.Expression.Type))
+            if (memberExpr.Member.Name == "Value" && memberExpr.Expression != null && IsNullableType(memberExpr.Expression.Type))
             {
                 return GetColumnName(memberExpr.Expression);
             }
