@@ -79,7 +79,12 @@ public class ViewEngine : IViewEngine
         }
 
         // Render template
-        return _templateEngine.Render(template, model, viewData);
+        var rendered = _templateEngine.Render(template, model, viewData);
+        
+        // Replace ~/ with / to resolve Razor-style paths (e.g., ~/css/admin.css -> /css/admin.css)
+        rendered = rendered.Replace("~/", "/");
+        
+        return rendered;
     }
 }
 

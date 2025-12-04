@@ -44,10 +44,15 @@ public class ShortLinkController(AppDbContext context, MiniCore.Framework.Loggin
     [HttpPost]
     public async Task<IActionResult> CreateLink([FromBody] CreateShortLinkRequest request)
     {
+        _logger.LogInformation("CreateLink called with request: {Request}", request != null ? "not null" : "null");
+        
         if (request == null || string.IsNullOrWhiteSpace(request.OriginalUrl))
         {
+            _logger.LogWarning("CreateLink failed: Invalid request - OriginalUrl is required");
             return BadRequest(new { error = "OriginalUrl is required" });
         }
+        
+        _logger.LogInformation("Creating short link for URL: {OriginalUrl}", request.OriginalUrl);
 
         if (!Uri.TryCreate(request.OriginalUrl, UriKind.Absolute, out var uri))
         {

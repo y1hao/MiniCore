@@ -15,10 +15,27 @@ public class RedirectController(AppDbContext context, MiniCore.Framework.Logging
 
     public async Task<IActionResult> RedirectToUrl(string path)
     {
-        // Extract shortCode from path (MapFallbackToController with {*path} pattern passes the entire unmatched path)
-        var pathSegments = path?.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        // Skip static file paths and API routes (these should have been handled by other middleware/routes)
+        if (string.IsNullOrEmpty(path))
+        {
+            return NotFound();
+        }
         
-        if (pathSegments == null || pathSegments.Length == 0)
+        var normalizedPath = path.TrimStart('/');
+        
+        // Skip paths that look like static files or API routes
+        if (normalizedPath.StartsWith("css/", StringComparison.OrdinalIgnoreCase) ||
+            normalizedPath.StartsWith("js/", StringComparison.OrdinalIgnoreCase) ||
+            normalizedPath.StartsWith("api/", StringComparison.OrdinalIgnoreCase) ||
+            normalizedPath.StartsWith("~/", StringComparison.OrdinalIgnoreCase))
+        {
+            return NotFound();
+        }
+        
+        // Extract shortCode from path (MapFallbackToController with {*path} pattern passes the entire unmatched path)
+        var pathSegments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        
+        if (pathSegments.Length == 0)
         {
             return NotFound();
         }
