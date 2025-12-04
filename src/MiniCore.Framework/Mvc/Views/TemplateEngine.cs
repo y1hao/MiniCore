@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text;
 using System.Text.Encodings.Web;
 
@@ -109,8 +110,7 @@ public class TemplateEngine
         
         if (conditionResult)
         {
-            var trueBlock = ifBlock.TrueBlock;
-            return RenderTemplate(trueBlock, context);
+            return RenderTemplate(ifBlock.TrueBlock, context);
         }
         else if (ifBlock.HasElse)
         {
@@ -174,6 +174,9 @@ public class TemplateEngine
             }
 
             var tagContent = template.Substring(nextOpen + 2, nextClose - nextOpen - 2).Trim();
+            // closeTag is like "{{/if}}", so we need to extract just "/if" (remove "{{" and "}}")
+            var closeTagPrefix = closeTag.Substring(2); // Remove "{{" -> "/if}}"
+            var closeTagContent = closeTagPrefix.Substring(0, closeTagPrefix.Length - 2).Trim(); // Remove "}}" -> "/if"
 
             if (elseTag != null && tagContent == "else" && depth == 1 && elseIndex == -1)
             {
@@ -183,7 +186,7 @@ public class TemplateEngine
             {
                 depth++;
             }
-            else if (tagContent.StartsWith(closeTag.Substring(2))) // Remove "{{" from closeTag
+            else if (tagContent == closeTagContent || tagContent.StartsWith(closeTagContent + " ")) // Match closing tag exactly or with trailing space
             {
                 depth--;
                 if (depth == 0)
@@ -223,6 +226,7 @@ public class TemplateEngine
 
         // Check if condition is a variable path
         var value = ResolvePath(condition, context);
+        
         if (value == null)
         {
             return false;
@@ -247,7 +251,8 @@ public class TemplateEngine
         // Check if it's a collection
         if (value is System.Collections.IEnumerable enumerable && !(value is string))
         {
-            return enumerable.Cast<object>().Any();
+            var count = enumerable.Cast<object>().Count();
+            return count > 0;
         }
 
         // Non-null is truthy
@@ -276,6 +281,19 @@ public class TemplateEngine
             return context.Model;
         }
 
+        // Handle "this.PropertyName" (for loops)
+        if (path.StartsWith("this.", StringComparison.OrdinalIgnoreCase))
+        {
+            var propertyPath = path.Substring(5); // Remove "this."
+            return ResolvePropertyPath(context.Model, propertyPath);
+        }
+
+        // Handle direct "model" reference
+        if (path.Equals("model", StringComparison.OrdinalIgnoreCase))
+        {
+            return context.Model;
+        }
+
         // Handle ViewData access
         if (path.StartsWith("ViewData.", StringComparison.OrdinalIgnoreCase))
         {
@@ -295,15 +313,19 @@ public class TemplateEngine
         }
 
         // Try as direct model property or ViewData
-        var directModel = ResolvePropertyPath(context.Model, path);
-        if (directModel != null)
+        // But only if it doesn't start with "this." (which we already handled above)
+        if (!path.StartsWith("this.", StringComparison.OrdinalIgnoreCase))
         {
-            return directModel;
-        }
+            var directModel = ResolvePropertyPath(context.Model, path);
+            if (directModel != null)
+            {
+                return directModel;
+            }
 
-        if (context.ViewData.TryGetValue(path, out var viewDataValue))
-        {
-            return viewDataValue;
+            if (context.ViewData.TryGetValue(path, out var viewDataValue))
+            {
+                return viewDataValue;
+            }
         }
 
         return null;
@@ -372,7 +394,12 @@ public class TemplateEngine
             System.Reflection.BindingFlags.Instance |
             System.Reflection.BindingFlags.IgnoreCase);
 
-        return field?.GetValue(obj);
+        if (field != null)
+        {
+            return field.GetValue(obj);
+        }
+
+        return null;
     }
 
     private object? GetIndexValue(object? obj, int index)
