@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using MiniCore.Framework.Data;
 using MiniCore.Framework.Data.Abstractions;
+using MiniCore.Framework.Logging;
 
 namespace MiniCore.Framework.Data.Internal;
 
@@ -14,11 +15,13 @@ internal class QueryProvider : IQueryProvider
 {
     private readonly DbContext _context;
     private readonly string _tableName;
+    private readonly ILogger? _logger;
 
-    public QueryProvider(DbContext context, string tableName)
+    public QueryProvider(DbContext context, string tableName, ILogger? logger = null)
     {
         _context = context;
         _tableName = tableName;
+        _logger = logger;
     }
 
     public IQueryable CreateQuery(Expression expression)
@@ -91,10 +94,19 @@ internal class QueryProvider : IQueryProvider
     {
         var queryInfo = QueryTranslator.Translate(expression, _tableName);
         
+        // Log the SQL query and parameters
+        _logger?.LogDebug("Executing SQL query: {Sql}", queryInfo.Sql);
+        if (queryInfo.Parameters.Count > 0)
+        {
+            _logger?.LogDebug("Query parameters: {Parameters}", string.Join(", ", queryInfo.Parameters));
+        }
+        
         using var connection = DatabaseHelper.CreateConnection(_context.ConnectionString!);
         await connection.OpenAsync(cancellationToken);
         
         var dataTable = await DatabaseHelper.ExecuteQueryAsync(connection, queryInfo.Sql, queryInfo.Parameters.ToArray());
+        
+        _logger?.LogDebug("Query returned {RowCount} rows", dataTable.Rows.Count);
         
         // Get the entity type (TEntity from DbSet<TEntity>)
         var entityType = typeof(TResult);
@@ -120,6 +132,35 @@ internal class QueryProvider : IQueryProvider
                 results.Add(entity);
             }
         }
+
+        // Always apply Skip/Take in-memory (we don't apply them in SQL to handle runtime values)
+        // This handles cases where Skip/Take use runtime values (like method parameters)
+        if (queryInfo.SkipCount.HasValue && queryInfo.SkipCount.Value > 0)
+        {
+            var skipValue = queryInfo.SkipCount.Value;
+            _logger?.LogDebug("Applying Skip({SkipValue}) in-memory", skipValue);
+            if (skipValue < results.Count)
+            {
+                results = results.Skip(skipValue).ToList();
+            }
+            else
+            {
+                results.Clear();
+            }
+        }
+
+        // Apply Take in-memory
+        // Only apply if > 0 (if it's 0, we assume it couldn't be evaluated at translation time)
+        // Note: We can't distinguish between "Take(0)" (intentional) and "Take(pageSize)" where pageSize couldn't be evaluated (defaulted to 0)
+        // So we'll only apply Take when the value is > 0
+        if (queryInfo.TakeCount.HasValue && queryInfo.TakeCount.Value > 0)
+        {
+            var takeValue = queryInfo.TakeCount.Value;
+            _logger?.LogDebug("Applying Take({TakeValue}) in-memory", takeValue);
+            results = results.Take(takeValue).ToList();
+        }
+        
+        _logger?.LogDebug("Final result count: {Count}", results.Count);
 
         // Apply Select projection if needed (in-memory)
         if (queryInfo.SelectExpression != null)

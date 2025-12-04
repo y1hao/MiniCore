@@ -12,6 +12,8 @@ internal class QueryInfo
     public string Sql { get; set; } = string.Empty;
     public List<object?> Parameters { get; set; } = new();
     public Expression? SelectExpression { get; set; }
+    public int? SkipCount { get; set; }
+    public int? TakeCount { get; set; }
 }
 
 internal static class QueryTranslator
@@ -75,17 +77,30 @@ internal static class QueryTranslator
         // Get Skip/Take
         skip = visitor.SkipCount;
         take = visitor.TakeCount;
+        
+        // Store Skip/Take in QueryInfo for in-memory application if needed
+        queryInfo.SkipCount = visitor.SkipCount;
+        queryInfo.TakeCount = visitor.TakeCount;
 
         // Get Select expression (for projection)
         selectExpression = visitor.SelectExpression;
 
         // Build SQL
+        // Don't apply Skip/Take in SQL if take is 0 (LIMIT 0 returns no rows)
+        // We'll always apply Skip/Take in-memory to handle runtime values (like method parameters)
+        int? sqlSkip = null; // Don't apply Skip in SQL, do it in-memory
+        int? sqlTake = null; // Don't apply Take in SQL, do it in-memory
+        
+        // Only apply Skip/Take in SQL if we have constant values > 0 AND they're not runtime-dependent
+        // For now, we'll always do Skip/Take in-memory to be safe
+        // TODO: Optimize to do Skip/Take in SQL when values are compile-time constants
+        
         queryInfo.Sql = QueryBuilder.BuildSelectQuery(
             tableName,
             whereClause.Length > 0 ? whereClause.ToString() : null,
             orderByClause.Length > 0 ? orderByClause.ToString() : null,
-            skip,
-            take
+            sqlSkip,
+            sqlTake
         );
 
         queryInfo.SelectExpression = selectExpression;
@@ -304,7 +319,20 @@ internal static class QueryTranslator
         if (expr is MemberExpression memberExpr)
         {
             var direction = orderExpr.Descending ? "DESC" : "ASC";
-            return $"[{memberExpr.Member.Name}] {direction}";
+            var columnName = memberExpr.Member.Name;
+            return $"[{columnName}] {direction}";
+        }
+        
+        // Fallback: try to extract member name from any expression that might represent a property access
+        // This handles cases where the expression structure is different than expected
+        if (expr != null)
+        {
+            var memberInfo = (expr as MemberExpression)?.Member;
+            if (memberInfo != null)
+            {
+                var direction = orderExpr.Descending ? "DESC" : "ASC";
+                return $"[{memberInfo.Name}] {direction}";
+            }
         }
         
         return string.Empty;
@@ -487,19 +515,50 @@ internal class QueryExpressionVisitor : ExpressionVisitor
         if (expression is ConstantExpression constantExpr && constantExpr.Value is int intValue)
             return intValue;
 
+        // Check if the expression contains parameters (runtime values that can't be evaluated at translation time)
+        if (ContainsParameter(expression))
+        {
+            return null;
+        }
+
+        // Try to evaluate the expression (handles captured variables, method calls, etc.)
         try
         {
+            // For binary expressions like (page - 1) * pageSize, we need to compile and evaluate
             var lambda = Expression.Lambda(expression);
             var compiled = lambda.Compile();
             var result = compiled.DynamicInvoke();
             if (result is int i)
+            {
                 return i;
+            }
         }
         catch
         {
+            // Expression couldn't be evaluated, return null
         }
 
         return null;
+    }
+
+    private bool ContainsParameter(Expression expression)
+    {
+        // Check if the expression tree contains any ParameterExpression nodes
+        // These represent runtime values that can't be evaluated at translation time
+        var visitor = new ParameterCheckVisitor();
+        visitor.Visit(expression);
+        return visitor.HasParameter;
+    }
+
+    private class ParameterCheckVisitor : ExpressionVisitor
+    {
+        public bool HasParameter { get; private set; }
+
+        protected override Expression VisitParameter(ParameterExpression node)
+        {
+            HasParameter = true;
+            return node;
+        }
     }
 }
 

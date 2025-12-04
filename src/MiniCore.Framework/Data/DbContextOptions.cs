@@ -1,3 +1,5 @@
+using MiniCore.Framework.Logging;
+
 namespace MiniCore.Framework.Data;
 
 /// <summary>
@@ -9,6 +11,11 @@ public class DbContextOptions
     /// Gets or sets the connection string.
     /// </summary>
     public string? ConnectionString { get; set; }
+
+    /// <summary>
+    /// Gets or sets the logger factory for creating loggers.
+    /// </summary>
+    public ILoggerFactory? LoggerFactory { get; set; }
 }
 
 /// <summary>

@@ -26,12 +26,13 @@ internal static class QueryBuilder
             sql.Append($" ORDER BY {orderBy}");
         }
 
-        if (take.HasValue)
+        // Only add LIMIT if it's a positive value (LIMIT 0 returns no rows)
+        if (take.HasValue && take.Value > 0)
         {
             sql.Append($" LIMIT {take.Value}");
         }
 
-        if (skip.HasValue)
+        if (skip.HasValue && skip.Value > 0)
         {
             sql.Append($" OFFSET {skip.Value}");
         }

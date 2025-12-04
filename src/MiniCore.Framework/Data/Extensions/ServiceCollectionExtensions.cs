@@ -1,5 +1,6 @@
 using MiniCore.Framework.Data;
 using MiniCore.Framework.DependencyInjection;
+using MiniCore.Framework.Logging;
 
 namespace MiniCore.Framework.Data.Extensions;
 
@@ -29,9 +30,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<DbContextOptions<TContext>>(options);
 
         // Register DbContext as scoped with factory
+        // This allows us to get ILoggerFactory from the service provider when creating the instance
         services.AddScoped<TContext>(serviceProvider =>
         {
             var optionsInstance = serviceProvider.GetRequiredService<DbContextOptions<TContext>>();
+            // Get logger factory from service provider and update options if not already set
+            var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+            if (loggerFactory != null && optionsInstance.LoggerFactory == null)
+            {
+                optionsInstance.LoggerFactory = loggerFactory;
+            }
             return (TContext)(Activator.CreateInstance(typeof(TContext), optionsInstance)
                 ?? throw new InvalidOperationException($"Failed to create instance of {typeof(TContext)}"));
         });

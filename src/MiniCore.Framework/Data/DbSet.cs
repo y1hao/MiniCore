@@ -21,7 +21,7 @@ public class DbSet<TEntity> : IQueryable<TEntity>, IOrderedQueryable<TEntity> wh
     {
         _context = context;
         _tableName = tableName;
-        _queryProvider = new QueryProvider(context, tableName);
+        _queryProvider = new QueryProvider(context, tableName, context.Logger);
         Expression = Expression.Constant(this);
     }
 
@@ -29,7 +29,7 @@ public class DbSet<TEntity> : IQueryable<TEntity>, IOrderedQueryable<TEntity> wh
     {
         _context = context;
         _tableName = tableName;
-        _queryProvider = new QueryProvider(context, tableName);
+        _queryProvider = new QueryProvider(context, tableName, context.Logger);
         Expression = expression;
     }
 

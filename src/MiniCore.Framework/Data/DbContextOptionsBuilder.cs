@@ -1,3 +1,5 @@
+using MiniCore.Framework.Logging;
+
 namespace MiniCore.Framework.Data;
 
 /// <summary>
@@ -11,6 +13,17 @@ public class DbContextOptionsBuilder
     /// Gets the options being configured.
     /// </summary>
     public DbContextOptions Options => _options;
+
+    /// <summary>
+    /// Sets the logger factory for the DbContext.
+    /// </summary>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <returns>The same builder instance so that multiple calls can be chained.</returns>
+    public DbContextOptionsBuilder UseLoggerFactory(ILoggerFactory? loggerFactory)
+    {
+        _options.LoggerFactory = loggerFactory;
+        return this;
+    }
 
     /// <summary>
     /// Configures the connection string.

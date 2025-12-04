@@ -38,6 +38,18 @@ if (!builder.Environment.IsEnvironment("Testing"))
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     if (!string.IsNullOrEmpty(connectionString))
     {
+        // Resolve relative database paths to absolute paths based on ContentRootPath
+        if (connectionString.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+        {
+            var dbPath = connectionString.Substring("Data Source=".Length).Trim();
+            if (!Path.IsPathRooted(dbPath))
+            {
+                // Make it an absolute path relative to ContentRootPath
+                dbPath = Path.Combine(builder.Environment.ContentRootPath, dbPath);
+                connectionString = $"Data Source={dbPath}";
+            }
+        }
+        
         builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseSqlite(connectionString));
     }

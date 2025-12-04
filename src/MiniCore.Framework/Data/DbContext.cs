@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using MiniCore.Framework.Data.Abstractions;
 using MiniCore.Framework.Data.Internal;
+using MiniCore.Framework.Logging;
 
 namespace MiniCore.Framework.Data;
 
@@ -11,6 +12,7 @@ public abstract class DbContext : IDbContext
 {
     private readonly DbContextOptions _options;
     private readonly Dictionary<object, EntityState> _trackedEntities = new();
+    private readonly ILogger? _logger;
     private bool _disposed;
 
     protected DbContext(DbContextOptions options)
@@ -20,6 +22,9 @@ public abstract class DbContext : IDbContext
         {
             throw new InvalidOperationException("Connection string must be provided.");
         }
+
+        // Create logger if logger factory is available
+        _logger = _options.LoggerFactory?.CreateLogger(GetType().Name);
     }
 
     /// <summary>
@@ -28,11 +33,21 @@ public abstract class DbContext : IDbContext
     internal string ConnectionString => _options.ConnectionString!;
 
     /// <summary>
+    /// Gets the logger for this context.
+    /// </summary>
+    internal ILogger? Logger => _logger;
+
+    /// <summary>
     /// Saves all changes made in this context to the database.
     /// </summary>
     public virtual async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         int changesCount = 0;
+
+        if (_trackedEntities.Count == 0)
+        {
+            return 0;
+        }
 
         using var connection = DatabaseHelper.CreateConnection(ConnectionString);
         await connection.OpenAsync(cancellationToken);
