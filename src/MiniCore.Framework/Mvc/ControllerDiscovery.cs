@@ -61,34 +61,34 @@ public class ControllerDiscovery : IControllerDiscovery
 
         foreach (var method in methods)
         {
-            var httpGetAttr = method.GetCustomAttribute<HttpGetAttribute>();
-            var httpPostAttr = method.GetCustomAttribute<HttpPostAttribute>();
-            var httpPutAttr = method.GetCustomAttribute<HttpPutAttribute>();
-            var httpDeleteAttr = method.GetCustomAttribute<HttpDeleteAttribute>();
-            var httpPatchAttr = method.GetCustomAttribute<HttpPatchAttribute>();
+            var httpGetAttrs = method.GetCustomAttributes<HttpGetAttribute>();
+            var httpPostAttrs = method.GetCustomAttributes<HttpPostAttribute>();
+            var httpPutAttrs = method.GetCustomAttributes<HttpPutAttribute>();
+            var httpDeleteAttrs = method.GetCustomAttributes<HttpDeleteAttribute>();
+            var httpPatchAttrs = method.GetCustomAttributes<HttpPatchAttribute>();
             var routeAttr = method.GetCustomAttribute<RouteAttribute>();
 
             var httpMethods = new List<(string Method, string? Template)>();
 
-            if (httpGetAttr != null)
+            foreach (var attr in httpGetAttrs)
             {
-                httpMethods.Add((httpGetAttr.HttpMethod, httpGetAttr.Template));
+                httpMethods.Add((attr.HttpMethod, attr.Template));
             }
-            if (httpPostAttr != null)
+            foreach (var attr in httpPostAttrs)
             {
-                httpMethods.Add((httpPostAttr.HttpMethod, httpPostAttr.Template));
+                httpMethods.Add((attr.HttpMethod, attr.Template));
             }
-            if (httpPutAttr != null)
+            foreach (var attr in httpPutAttrs)
             {
-                httpMethods.Add((httpPutAttr.HttpMethod, httpPutAttr.Template));
+                httpMethods.Add((attr.HttpMethod, attr.Template));
             }
-            if (httpDeleteAttr != null)
+            foreach (var attr in httpDeleteAttrs)
             {
-                httpMethods.Add((httpDeleteAttr.HttpMethod, httpDeleteAttr.Template));
+                httpMethods.Add((attr.HttpMethod, attr.Template));
             }
-            if (httpPatchAttr != null)
+            foreach (var attr in httpPatchAttrs)
             {
-                httpMethods.Add((httpPatchAttr.HttpMethod, httpPatchAttr.Template));
+                httpMethods.Add((attr.HttpMethod, attr.Template));
             }
 
             // If no HTTP method attribute, default to GET

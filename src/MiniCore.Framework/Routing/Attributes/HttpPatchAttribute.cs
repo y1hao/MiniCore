@@ -3,7 +3,7 @@ namespace MiniCore.Framework.Routing.Attributes;
 /// <summary>
 /// Identifies an action that supports the HTTP PATCH method.
 /// </summary>
-[AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
 public class HttpPatchAttribute : HttpMethodAttribute
 {
     /// <summary>

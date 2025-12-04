@@ -12,6 +12,7 @@ public class AdminController(AppDbContext context) : Controller
     private readonly AppDbContext _context = context;
 
     [HttpGet("/")]
+    [HttpGet("/")]
     [HttpGet("/admin")]
     public async Task<IActionResult> Index()
     {

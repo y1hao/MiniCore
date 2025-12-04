@@ -3,7 +3,7 @@ namespace MiniCore.Framework.Routing.Attributes;
 /// <summary>
 /// Identifies an action that supports the HTTP POST method.
 /// </summary>
-[AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
 public class HttpPostAttribute : HttpMethodAttribute
 {
     /// <summary>
