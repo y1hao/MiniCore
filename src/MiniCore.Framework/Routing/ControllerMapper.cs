@@ -46,6 +46,9 @@ public class ControllerMapper
     /// <param name="assemblies">The assemblies to scan for controllers. If not specified, searches all loaded assemblies.</param>
     public void MapControllers(params Assembly[] assemblies)
     {
+        // Track whether assemblies were explicitly provided before any reassignment
+        var wasExplicitAssembly = assemblies != null && assemblies.Length > 0;
+
         if (assemblies == null || assemblies.Length == 0)
         {
             // Search all loaded assemblies to find controllers (needed for test scenarios)
@@ -66,11 +69,6 @@ public class ControllerMapper
         }
 
         // If still no controllers found and assemblies were explicitly provided, this indicates a problem
-        // Check if assemblies were explicitly provided (not the fallback case)
-        var wasExplicitAssembly = assemblies != null && assemblies.Length > 0 && 
-                                  !assemblies.SequenceEqual(AppDomain.CurrentDomain.GetAssemblies()
-                                      .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
-                                      .ToArray());
         if (controllers.Count == 0 && wasExplicitAssembly)
         {
             var assemblyNames = string.Join(", ", assemblies.Select(a => a.GetName().Name ?? "Unknown"));
