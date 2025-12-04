@@ -51,6 +51,11 @@ if (!builder.Environment.IsEnvironment("Testing"))
 
 var app = builder.Build();
 
+// Get logger and log startup
+var loggerFactory = app.Services.GetService<MiniCore.Framework.Logging.ILoggerFactory>();
+var logger = loggerFactory?.CreateLogger("MiniCore.Web");
+logger?.LogInformation("Application starting...");
+
 // Ensure database is created (skip in test environment)
 if (!app.Environment.IsEnvironment("Testing"))
 {
@@ -78,4 +83,5 @@ app.MapFallbackToController(
     controller: "Redirect",
     pattern: "{*path}");
 
+logger?.LogInformation("Application configured. Starting server...");
 app.Run();

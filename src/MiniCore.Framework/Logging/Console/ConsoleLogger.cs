@@ -49,6 +49,7 @@ internal class ConsoleLogger : ILogger
             }
 
             System.Console.WriteLine(formattedMessage);
+            System.Console.Out.Flush(); // Ensure output is flushed immediately
         }
         finally
         {

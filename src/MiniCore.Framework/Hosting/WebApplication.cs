@@ -158,9 +158,17 @@ public class WebApplication
         // Get URLs from configuration
         var urls = GetUrls();
 
-        // Get logger
+        // Get logger - ensure it's not null
         var loggerFactory = _host.Services.GetService<ILoggerFactory>();
+        if (loggerFactory == null)
+        {
+            // Fallback: write directly to console if logging isn't configured
+            System.Console.WriteLine("WARNING: ILoggerFactory not found. Logging may not work properly.");
+        }
         var logger = loggerFactory?.CreateLogger<HttpListenerServer>();
+
+        // Log startup
+        logger?.LogInformation("Starting MiniCore web application...");
 
         // Create and start the server
         // Explicitly use DependencyInjection.IServiceProvider to avoid type ambiguity

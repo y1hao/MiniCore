@@ -100,18 +100,16 @@ public class HostBuilder : IHostBuilder
         services.AddSingleton<IConfiguration>(configuration);
         services.AddSingleton<IConfigurationRoot>(configuration);
 
-        // Step 3: Configure logging
-        var loggingProviders = new List<ILoggerProvider>();
-        var loggingBuilder = new LoggingBuilder(services, loggingProviders);
-        foreach (var configureLogging in _configureLoggingDelegates)
-        {
-            configureLogging(loggingBuilder);
-        }
-
-        // Register logging if not already registered
+        // Step 3: Configure logging (ensure logging is registered exactly once)
         if (!services.Any(sd => sd.ServiceType == typeof(ILoggerFactory)))
         {
-            services.AddLogging();
+            services.AddLogging(builder =>
+            {
+                foreach (var configureLogging in _configureLoggingDelegates)
+                {
+                    configureLogging(builder);
+                }
+            });
         }
 
         // Step 4: Register HostApplicationLifetime
